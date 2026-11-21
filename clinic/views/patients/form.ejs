@@ -1,0 +1,34 @@
+<%- include('../partials/header') %>
+<div class="page-head"><div><h1><%= title %></h1><% if (p.code) { %><div class="muted">Mã BN: <%= p.code %></div><% } %></div></div>
+<div class="card">
+  <%- include('../partials/errors', { errors }) %>
+  <form method="post" action="<%= action %>">
+    <%- include('../partials/csrf') %>
+    <input type="hidden" name="next" value="<%= query.next || '' %>">
+    <h3>Thông tin hành chính</h3>
+    <div class="form-grid">
+      <div class="field"><label>Họ và tên *</label><input name="full_name" value="<%= p.full_name || '' %>" required></div>
+      <div class="field"><label>Giới tính</label>
+        <select name="gender"><option value="">—</option><% Object.entries(GENDERS).forEach(([k, v]) => { %><option value="<%= k %>" <%= p.gender === k ? 'selected' : '' %>><%= v %></option><% }) %></select>
+      </div>
+      <div class="field"><label>Ngày sinh</label><input type="date" name="dob" value="<%= p.dob || '' %>" max="<%= today() %>"></div>
+      <div class="field"><label>Số điện thoại</label><input name="phone" value="<%= p.phone || '' %>" inputmode="tel"></div>
+      <div class="field"><label>Số CCCD</label><input name="id_number" value="<%= p.id_number || '' %>"></div>
+      <div class="field"><label>Số thẻ BHYT</label><input name="insurance_number" value="<%= p.insurance_number || '' %>"></div>
+      <div class="field"><label>Nghề nghiệp</label><input name="occupation" value="<%= p.occupation || '' %>"></div>
+      <div class="field"><label>Người liên hệ khi cần</label><input name="emergency_contact" value="<%= p.emergency_contact || '' %>" placeholder="Tên – quan hệ – SĐT"></div>
+      <div class="field wide"><label>Địa chỉ</label><input name="address" value="<%= p.address || '' %>"></div>
+    </div>
+    <h3>Thông tin y tế</h3>
+    <div class="form-grid">
+      <div class="field"><label>Dị ứng</label><textarea name="allergies" placeholder="Thuốc, thức ăn…"><%= p.allergies || '' %></textarea></div>
+      <div class="field"><label>Tiền sử bệnh</label><textarea name="medical_history" placeholder="Bản thân, gia đình…"><%= p.medical_history || '' %></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" type="submit">Lưu</button>
+      <% if (!p.id) { %><button class="btn" type="submit" name="next" value="checkin">Lưu &amp; tiếp nhận khám</button><% } %>
+      <a class="btn" href="<%= p.id ? '/patients/' + p.id : '/patients' %>">Hủy</a>
+    </div>
+  </form>
+</div>
+<%- include('../partials/footer') %>

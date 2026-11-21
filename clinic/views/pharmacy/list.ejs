@@ -1,0 +1,35 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div><div class="eyebrow">Dược &amp; vật tư</div><h1>Kho thuốc</h1><div class="muted"><%= medicines.length %> mặt hàng</div></div>
+  <% if (can('pharmacist')) { %><div class="actions"><a class="btn primary" href="/pharmacy/new">+ Thêm thuốc</a></div><% } %>
+</div>
+<div class="card">
+  <form class="filters" method="get" action="/pharmacy">
+    <input type="search" name="q" value="<%= q || '' %>" placeholder="Tên, mã, hoạt chất…">
+    <select name="filter">
+      <option value="">Tất cả</option>
+      <option value="low" <%= filter === 'low' ? 'selected' : '' %>>Sắp hết / hết hàng</option>
+      <option value="expiring" <%= filter === 'expiring' ? 'selected' : '' %>>Hết hạn trong 90 ngày</option>
+    </select>
+    <label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" name="inactive" value="1" style="width:auto" <%= query.inactive === '1' ? 'checked' : '' %>> Gồm thuốc ngừng dùng</label>
+    <button class="btn">Lọc</button>
+  </form>
+  <% if (medicines.length) { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Mã</th><th>Tên thuốc</th><th>Hoạt chất</th><th>ĐVT</th><th class="num">Giá bán</th><th class="num">Tồn kho</th><th>Hạn dùng</th></tr></thead>
+    <tbody>
+    <% medicines.forEach(m => { %>
+      <tr>
+        <td><%= m.code || '' %></td>
+        <td><a href="/pharmacy/<%= m.id %>"><strong><%= m.name %></strong></a><%= m.active ? '' : ' (ngừng)' %></td>
+        <td><%= m.active_ingredient || '' %></td><td><%= m.unit %></td>
+        <td class="num"><%= money(m.price) %></td>
+        <td class="num"><span class="badge <%= m.stock === 0 ? 'danger' : (m.stock <= m.min_stock ? 'warn' : 'ok') %>"><%= m.stock %></span></td>
+        <td class="<%= m.expiry_date && m.expiry_date <= soon ? 'badge warn' : '' %>"><%= fmtDate(m.expiry_date) %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% } else { %><div class="empty">Không có thuốc phù hợp.</div><% } %>
+</div>
+<%- include('../partials/footer') %>

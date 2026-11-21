@@ -1,0 +1,45 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div><h1>Lịch hẹn</h1><div class="muted"><%= view === 'week' ? `Tuần ${fmtDate(from)} – ${fmtDate(to)}` : `Ngày ${fmtDate(date)}` %> · <%= appointments.length %> lịch</div></div>
+  <% if (can('receptionist','doctor')) { %><div class="actions"><a class="btn primary" href="/appointments/new?date=<%= date %>">+ Đặt lịch hẹn</a></div><% } %>
+</div>
+<div class="card">
+  <form class="filters" method="get" action="/appointments">
+    <a class="btn small" href="?date=<%= prev %>&view=<%= view %>">←</a>
+    <input type="date" name="date" value="<%= date %>">
+    <a class="btn small" href="?date=<%= next %>&view=<%= view %>">→</a>
+    <select name="view"><option value="day" <%= view === 'day' ? 'selected' : '' %>>Theo ngày</option><option value="week" <%= view === 'week' ? 'selected' : '' %>>7 ngày</option></select>
+    <select name="department_id"><option value="">Tất cả chuyên khoa</option><% departments.forEach(d => { %><option value="<%= d.id %>" <%= departmentId === d.id ? 'selected' : '' %>><%= d.name %></option><% }) %></select>
+    <select name="doctor_id"><option value="">Tất cả bác sĩ</option><% doctors.forEach(d => { %><option value="<%= d.id %>" <%= doctorId === d.id ? 'selected' : '' %>><%= d.full_name %></option><% }) %></select>
+    <button class="btn" type="submit">Xem</button>
+    <a href="/appointments">Hôm nay</a>
+  </form>
+  <% if (appointments.length) { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Thời gian</th><th>Bệnh nhân</th><th>Chuyên khoa</th><th>Bác sĩ</th><th>Lý do</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>
+    <% appointments.forEach(a => { %>
+      <tr>
+        <td class="nowrap"><strong><%= view === 'week' ? fmtDateTime(a.scheduled_at) : fmtTime(a.scheduled_at) %></strong></td>
+        <td><a href="/patients/<%= a.patient_id %>"><%= a.full_name %></a><div class="small muted"><%= a.code %> · <%= a.phone || '' %></div></td>
+        <td><%= a.dept_name || '' %></td><td><%= a.doctor_name || '—' %></td><td><%= a.reason || '' %></td>
+        <td><%- include('../partials/badge', { map: APPT_STATUS, status: a.status }) %></td>
+        <td class="right nowrap">
+          <% if (a.status === 'scheduled' && can('receptionist','doctor')) { %>
+            <form method="post" action="/appointments/<%= a.id %>/checkin" class="inline"><%- include('../partials/csrf') %><button class="btn small primary">Tiếp đón</button></form>
+            <a class="btn small" href="/appointments/<%= a.id %>/edit">Sửa</a>
+            <form method="post" action="/appointments/<%= a.id %>/status" class="inline"><%- include('../partials/csrf') %><input type="hidden" name="status" value="no_show"><button class="btn small">Không đến</button></form>
+            <form method="post" action="/appointments/<%= a.id %>/status" class="inline" data-confirm="Hủy lịch hẹn này?"><%- include('../partials/csrf') %><input type="hidden" name="status" value="cancelled"><button class="btn small danger">Hủy</button></form>
+          <% } else if (a.status === 'checked_in' && a.visit_id) { %>
+            <a class="btn small" href="/visits/<%= a.visit_id %>">Xem lượt khám</a>
+          <% } else if (can('receptionist','doctor') && a.status !== 'checked_in') { %>
+            <form method="post" action="/appointments/<%= a.id %>/status" class="inline"><%- include('../partials/csrf') %><input type="hidden" name="status" value="scheduled"><button class="btn small">Khôi phục</button></form>
+          <% } %>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% } else { %><div class="empty">Không có lịch hẹn.</div><% } %>
+</div>
+<%- include('../partials/footer') %>

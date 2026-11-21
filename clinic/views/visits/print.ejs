@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đơn thuốc — <%= patient.full_name %></title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body style="background:#fff">
+<div class="print-page">
+  <div class="no-print actions"><button class="btn primary" data-print>In</button><a class="btn" href="/visits/<%= v.id %>">Quay lại</a></div>
+  <div class="print-head">
+    <div><strong><%= clinicName.toUpperCase() %></strong><div class="small"><%= v.dept_name || '' %><%= v.room ? ' – ' + v.room : '' %></div></div>
+    <div class="right small">Mã BN: <%= patient.code %><br>Số khám: <%= v.queue_number %> – <%= fmtDate(v.visit_date) %></div>
+  </div>
+  <div class="print-title"><%= prescription.length ? 'Đơn thuốc' : 'Phiếu khám bệnh' %></div>
+  <dl class="kv">
+    <dt>Họ tên</dt><dd><strong><%= patient.full_name %></strong> — <%= GENDERS[patient.gender] || '' %> — <%= age(patient.dob) %></dd>
+    <dt>Địa chỉ</dt><dd><%= patient.address || '' %></dd>
+    <% if (patient.insurance_number) { %><dt>Số thẻ BHYT</dt><dd><%= patient.insurance_number %></dd><% } %>
+    <dt>Chẩn đoán</dt><dd><%= v.diagnosis || '' %><%= v.icd_code ? ` (${v.icd_code})` : '' %></dd>
+  </dl>
+  <% if (prescription.length) { %>
+  <table class="mt">
+    <thead><tr><th>#</th><th>Tên thuốc</th><th class="num">Số lượng</th><th>Cách dùng</th></tr></thead>
+    <tbody>
+    <% prescription.forEach((m, i) => { %>
+      <tr><td><%= i + 1 %></td><td><strong><%= m.name %></strong><div class="small"><%= m.active_ingredient || '' %></div></td><td class="num"><%= m.quantity %> <%= m.unit %></td><td><%= m.dosage || '' %><%= m.days ? ` (${m.days} ngày)` : '' %></td></tr>
+    <% }) %>
+    </tbody>
+  </table>
+  <% } %>
+  <% const cls = services.filter(s => s.category !== 'Khám'); if (cls.length) { %>
+  <h3 class="mt">Cận lâm sàng</h3>
+  <table><tbody><% cls.forEach(s => { %><tr><td><%= s.name %></td><td style="white-space:pre-line"><%= s.result || '(chưa có kết quả)' %></td></tr><% }) %></tbody></table>
+  <% } %>
+  <% if (v.advice) { %><p class="mt"><strong>Lời dặn:</strong> <%= v.advice %></p><% } %>
+  <% if (v.follow_up_date) { %><p><strong>Hẹn tái khám:</strong> <%= fmtDate(v.follow_up_date) %></p><% } %>
+  <div class="sign"><div></div><div>Ngày <%= fmtDate(v.visit_date) %><br><strong>Bác sĩ khám bệnh</strong><br><br><br><br><%= v.doctor_title ? v.doctor_title + ' ' : '' %><%= v.doctor_name || '' %></div></div>
+</div>
+</body></html>

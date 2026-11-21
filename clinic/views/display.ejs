@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Màn hình phòng chờ</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body class="display-body" data-refresh="15">
+  <div class="display-head">
+    <div><h1><%= clinicName %></h1><div style="opacity:.8">Mời bệnh nhân theo số thứ tự vào phòng khám</div></div>
+    <div class="display-clock" data-clock></div>
+  </div>
+  <% if (rooms.length) { %>
+  <div class="display-grid">
+    <% rooms.forEach(r => { %>
+    <div class="display-room">
+      <h2><span><%= r.name %></span><span><%= r.room || '' %></span></h2>
+      <div class="display-now">
+        <% if (r.current.length) { %><%= r.current.map(c => c.n).join(' · ') %><small><%= r.current.map(c => c.name).join(', ') %></small><% } else { %>—<small>Đang chờ gọi số</small><% } %>
+      </div>
+      <div class="display-next">Tiếp theo: <% r.next.forEach(n => { %><span><%= n.n %> <%= n.name %></span><% }) %><%= r.next.length ? '' : 'không có' %></div>
+      <div class="display-next" style="margin-top:6px;opacity:.7">Đang chờ: <%= r.waiting %></div>
+    </div>
+    <% }) %>
+  </div>
+  <% } else { %><div class="display-room"><h2>Hiện không có bệnh nhân chờ khám.</h2></div><% } %>
+  <p style="opacity:.5;margin-top:20px" class="small">Tự cập nhật mỗi 15 giây · <a href="/" style="color:#cfe8dc">Về trang quản lý</a></p>
+</body></html>

@@ -1,0 +1,38 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div><div class="eyebrow">Kho thuốc · <%= m.code || '' %></div><h1><%= m.name %></h1><div class="muted"><%= m.active_ingredient || '' %> · <%= money(m.price) %>/<%= m.unit %></div></div>
+  <% if (can('pharmacist')) { %><div class="actions"><a class="btn" href="/pharmacy/<%= m.id %>/edit">Sửa</a></div><% } %>
+</div>
+<div class="grid grid-main">
+  <div class="card">
+    <h2>Lịch sử nhập / xuất</h2>
+    <% if (movements.length) { %>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Thời gian</th><th class="num">Thay đổi</th><th>Lý do</th><th>Chứng từ</th><th>Người thực hiện</th></tr></thead>
+      <tbody><% movements.forEach(s => { %>
+        <tr><td class="nowrap"><%= fmtDateTime(s.created_at) %></td><td class="num"><span class="badge <%= s.change > 0 ? 'ok' : 'warn' %>"><%= s.change > 0 ? '+' : '' %><%= s.change %></span></td><td><%= s.reason %></td><td><%= s.ref || '' %></td><td><%= s.full_name || '' %></td></tr>
+      <% }) %></tbody>
+    </table></div>
+    <% } else { %><div class="empty">Chưa có giao dịch.</div><% } %>
+  </div>
+  <div>
+    <div class="card">
+      <div class="kpi" style="padding:0;border:0"><div class="label">Tồn kho hiện tại</div><div class="value <%= m.stock <= m.min_stock ? 'warn' : '' %>"><%= m.stock %> <%= m.unit %></div><div class="sub">Tối thiểu: <%= m.min_stock %> · HSD: <%= fmtDate(m.expiry_date) || '—' %></div></div>
+    </div>
+    <% if (can('pharmacist')) { %>
+    <div class="card">
+      <h2>Nhập / xuất kho</h2>
+      <form method="post" action="/pharmacy/<%= m.id %>/stock">
+        <%- include('../partials/csrf') %>
+        <div class="field"><label>Loại</label><select name="type"><option value="in">Nhập kho</option><option value="out">Xuất điều chỉnh (hỏng, hết hạn…)</option></select></div>
+        <div class="field"><label>Số lượng (<%= m.unit %>)</label><input name="quantity" type="number" min="1" required></div>
+        <div class="field"><label>Lý do</label><input name="reason" placeholder="Nhập từ nhà cung cấp…"></div>
+        <div class="field"><label>Số chứng từ / lô</label><input name="ref"></div>
+        <div class="field"><label>Hạn dùng lô mới (khi nhập)</label><input name="expiry_date" type="date"></div>
+        <button class="btn primary">Ghi nhận</button>
+      </form>
+    </div>
+    <% } %>
+  </div>
+</div>
+<%- include('../partials/footer') %>

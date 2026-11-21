@@ -1,0 +1,30 @@
+<%- include('../partials/header') %>
+<div class="page-head"><div><h1>Chuyên khoa / phòng khám</h1></div></div>
+<div class="card">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Tên</th><th>Phòng</th><th>Dịch vụ khám mặc định</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>
+    <% list.forEach(d => { %>
+      <tr><td colspan="5" style="padding:0">
+        <form method="post" action="/admin/departments" class="inline-form" style="padding:6px 10px">
+          <%- include('../partials/csrf') %><input type="hidden" name="id" value="<%= d.id %>">
+          <input name="name" value="<%= d.name %>" required style="flex:2;min-width:160px">
+          <input name="room" value="<%= d.room || '' %>" style="width:90px" placeholder="Phòng">
+          <select name="default_service_id" style="flex:2;min-width:180px"><option value="">— Không —</option><% examServices.forEach(s => { %><option value="<%= s.id %>" <%= d.default_service_id === s.id ? 'selected' : '' %>><%= s.name %></option><% }) %></select>
+          <select name="active"><option value="1" <%= d.active ? 'selected' : '' %>>Hoạt động</option><option value="0" <%= d.active ? '' : 'selected' %>>Ngừng</option></select>
+          <button class="btn small">Lưu</button>
+        </form>
+      </td></tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <h3 class="mt">Thêm chuyên khoa</h3>
+  <form method="post" action="/admin/departments" class="inline-form">
+    <%- include('../partials/csrf') %>
+    <input name="name" placeholder="Tên chuyên khoa" required style="flex:2;min-width:160px">
+    <input name="room" placeholder="Phòng" style="width:90px">
+    <select name="default_service_id" style="flex:2;min-width:180px"><option value="">— Dịch vụ khám mặc định —</option><% examServices.forEach(s => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select>
+    <button class="btn primary">Thêm</button>
+  </form>
+</div>
+<%- include('../partials/footer') %>

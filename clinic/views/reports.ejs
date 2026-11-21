@@ -1,0 +1,65 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><div class="eyebrow">Báo cáo</div><h1>Báo cáo thống kê</h1><div class="muted">Từ <%= fmtDate(from) %> đến <%= fmtDate(to) %></div></div>
+  <form class="filters" method="get" action="/reports" style="margin:0">
+    <input type="date" name="from" value="<%= from %>"> <input type="date" name="to" value="<%= to %>">
+    <button class="btn">Xem</button>
+    <a class="btn" href="/reports/invoices.csv?from=<%= from %>&to=<%= to %>">Xuất CSV doanh thu</a>
+  </form>
+</div>
+<%
+  const byType = Object.fromEntries(revenueByType.map(r => [r.item_type, r.total]));
+  const maxDay = Math.max(1, ...revenueByDay.map(r => r.total));
+%>
+<div class="kpis">
+  <div class="kpi"><div class="label">Doanh thu thực thu</div><div class="value money"><%= money(revenueTotal) %></div><div class="sub">Đã trừ giảm giá <%= money(discounts) %></div></div>
+  <div class="kpi"><div class="label">Dịch vụ</div><div class="value money"><%= money(byType.service || 0) %></div></div>
+  <div class="kpi"><div class="label">Thuốc</div><div class="value money"><%= money(byType.medicine || 0) %></div></div>
+  <div class="kpi"><div class="label">Lượt khám</div><div class="value"><%= visitTotal %></div></div>
+  <div class="kpi"><div class="label">Bệnh nhân mới</div><div class="value"><%= newPatients %></div></div>
+</div>
+<div class="card">
+  <h2>Doanh thu theo ngày</h2>
+  <% if (revenueByDay.length) { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Ngày</th><th class="num">Số HĐ</th><th class="num">Doanh thu</th><th style="width:45%"></th></tr></thead>
+    <tbody><% revenueByDay.forEach(r => { %>
+      <tr><td><%= fmtDate(r.day) %></td><td class="num"><%= r.n %></td><td class="num"><%= money(r.total) %></td>
+      <td><div style="height:10px;border-radius:5px;background:var(--primary);width:<%= Math.max(2, Math.round(r.total / maxDay * 100)) %>%"></div></td></tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } else { %><div class="empty">Chưa có doanh thu trong khoảng này.</div><% } %>
+</div>
+<div class="grid grid-2 mt">
+  <div class="card">
+    <h2>Lượt khám theo chuyên khoa</h2>
+    <table><thead><tr><th>Chuyên khoa</th><th class="num">Lượt</th><th class="num">Đã khám</th></tr></thead>
+      <tbody><% visitsByDept.forEach(r => { %><tr><td><%= r.name %></td><td class="num"><%= r.n %></td><td class="num"><%= r.done %></td></tr><% }) %></tbody></table>
+    <% if (!visitsByDept.length) { %><div class="empty">Không có dữ liệu.</div><% } %>
+  </div>
+  <div class="card">
+    <h2>Lượt khám theo bác sĩ</h2>
+    <table><thead><tr><th>Bác sĩ</th><th class="num">Đã khám</th></tr></thead>
+      <tbody><% byDoctor.forEach(r => { %><tr><td><%= r.full_name %></td><td class="num"><%= r.n %></td></tr><% }) %></tbody></table>
+    <% if (!byDoctor.length) { %><div class="empty">Không có dữ liệu.</div><% } %>
+  </div>
+  <div class="card">
+    <h2>Chẩn đoán thường gặp</h2>
+    <table><thead><tr><th>ICD</th><th>Chẩn đoán</th><th class="num">Số ca</th></tr></thead>
+      <tbody><% topDiagnoses.forEach(r => { %><tr><td><%= r.icd %></td><td><%= r.diagnosis %></td><td class="num"><%= r.n %></td></tr><% }) %></tbody></table>
+    <% if (!topDiagnoses.length) { %><div class="empty">Không có dữ liệu.</div><% } %>
+  </div>
+  <div class="card">
+    <h2>Dịch vụ doanh thu cao</h2>
+    <table><thead><tr><th>Dịch vụ</th><th class="num">SL</th><th class="num">Doanh thu</th></tr></thead>
+      <tbody><% topServices.forEach(r => { %><tr><td><%= r.description %></td><td class="num"><%= r.qty %></td><td class="num"><%= money(r.total) %></td></tr><% }) %></tbody></table>
+    <% if (!topServices.length) { %><div class="empty">Không có dữ liệu.</div><% } %>
+  </div>
+  <div class="card">
+    <h2>Thuốc xuất nhiều</h2>
+    <table><thead><tr><th>Thuốc</th><th class="num">SL</th><th class="num">Doanh thu</th></tr></thead>
+      <tbody><% topMedicines.forEach(r => { %><tr><td><%= r.description %></td><td class="num"><%= r.qty %></td><td class="num"><%= money(r.total) %></td></tr><% }) %></tbody></table>
+    <% if (!topMedicines.length) { %><div class="empty">Không có dữ liệu.</div><% } %>
+  </div>
+</div>
+<%- include('partials/footer') %>

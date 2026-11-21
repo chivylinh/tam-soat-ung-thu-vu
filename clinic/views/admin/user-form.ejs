@@ -1,0 +1,19 @@
+<%- include('../partials/header') %>
+<div class="page-head"><div><h1><%= title %></h1></div></div>
+<div class="card" style="max-width:760px">
+  <%- include('../partials/errors', { errors }) %>
+  <form method="post" action="<%= action %>">
+    <%- include('../partials/csrf') %>
+    <div class="form-grid">
+      <div class="field"><label>Họ tên *</label><input name="full_name" value="<%= u.full_name || '' %>" required></div>
+      <div class="field"><label>Chức danh</label><input name="title" value="<%= u.title || '' %>" placeholder="BS., ThS.BS., KTV…"></div>
+      <div class="field"><label>Tên đăng nhập *</label><input name="username" value="<%= u.username || '' %>" required autocomplete="off"></div>
+      <div class="field"><label>Mật khẩu <%= u.id ? '(để trống nếu không đổi)' : '*' %></label><input type="password" name="password" autocomplete="new-password" <%= u.id ? '' : 'required' %> minlength="8"></div>
+      <div class="field"><label>Vai trò *</label><select name="role"><% Object.entries(ROLES).forEach(([k, v]) => { %><option value="<%= k %>" <%= u.role === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+      <div class="field"><label>Chuyên khoa</label><select name="department_id"><option value="">—</option><% departments.forEach(d => { %><option value="<%= d.id %>" <%= u.department_id === d.id ? 'selected' : '' %>><%= d.name %></option><% }) %></select></div>
+      <div class="field"><label>Trạng thái</label><select name="active"><option value="1" <%= u.active ? 'selected' : '' %>>Hoạt động</option><option value="0" <%= u.active ? '' : 'selected' %>>Khóa</option></select></div>
+    </div>
+    <div class="actions"><button class="btn primary">Lưu</button><a class="btn" href="/admin/users">Hủy</a></div>
+  </form>
+</div>
+<%- include('../partials/footer') %>

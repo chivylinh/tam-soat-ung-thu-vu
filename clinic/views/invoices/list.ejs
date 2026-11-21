@@ -1,0 +1,54 @@
+<%- include('../partials/header') %>
+<div class="page-head"><div><div class="eyebrow">Kế toán viện phí</div><h1>Thu ngân</h1><div class="muted">Ngày <%= fmtDate(date) %></div></div></div>
+<div class="kpis">
+  <% let sum = 0; totals.forEach(t => { sum += t.s; %>
+    <div class="kpi"><div class="label"><%= PAYMENT_METHODS[t.payment_method] || t.payment_method %></div><div class="value money"><%= money(t.s) %></div><div class="sub"><%= t.n %> hóa đơn</div></div>
+  <% }) %>
+  <div class="kpi"><div class="label">Tổng thu trong ngày</div><div class="value money"><%= money(sum) %></div></div>
+</div>
+<div class="card">
+  <div class="card-head"><h2>Chờ thanh toán (<%= pending.length %>)</h2><span class="muted small">Lượt khám 7 ngày gần đây có dịch vụ / thuốc chưa thu tiền</span></div>
+  <% if (pending.length) { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Ngày</th><th>STT</th><th>Bệnh nhân</th><th>Chuyên khoa</th><th>Trạng thái khám</th><th></th></tr></thead>
+    <tbody>
+    <% pending.forEach(v => { %>
+      <tr>
+        <td><%= fmtDate(v.visit_date) %></td><td><span class="qnum"><%= v.queue_number %></span></td>
+        <td><a href="/visits/<%= v.id %>"><strong><%= v.full_name %></strong></a><div class="small muted"><%= v.code %></div></td>
+        <td><%= v.dept_name || '' %></td>
+        <td><%- include('../partials/badge', { map: VISIT_STATUS, status: v.status }) %></td>
+        <td class="right"><form method="post" action="/invoices/from-visit/<%= v.id %>" class="inline"><%- include('../partials/csrf') %><button class="btn small primary"><%= v.unpaid_invoice_id ? 'Mở hóa đơn' : 'Lập hóa đơn' %></button></form></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% } else { %><div class="empty">Không có khoản chờ thu.</div><% } %>
+</div>
+<div class="card">
+  <div class="card-head"><h2>Hóa đơn</h2>
+    <form class="filters" method="get" action="/invoices" style="margin:0">
+      <input type="date" name="date" value="<%= date %>">
+      <select name="status"><option value="">Mọi trạng thái</option><% Object.entries(INVOICE_STATUS).forEach(([k, v]) => { %><option value="<%= k %>" <%= status === k ? 'selected' : '' %>><%= v[0] %></option><% }) %></select>
+      <button class="btn small">Lọc</button>
+    </form>
+  </div>
+  <% if (invoices.length) { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Mã HĐ</th><th>Bệnh nhân</th><th>Thời gian</th><th class="num">Tạm tính</th><th class="num">Giảm</th><th class="num">Thành tiền</th><th>Hình thức</th><th>Trạng thái</th></tr></thead>
+    <tbody>
+    <% invoices.forEach(i => { %>
+      <tr>
+        <td><a href="/invoices/<%= i.id %>"><%= i.code %></a></td>
+        <td><%= i.full_name %><div class="small muted"><%= i.patient_code %></div></td>
+        <td class="nowrap"><%= fmtDateTime(i.paid_at || i.created_at) %></td>
+        <td class="num"><%= money(i.subtotal) %></td><td class="num"><%= i.discount ? money(i.discount) : '' %></td><td class="num"><strong><%= money(i.total) %></strong></td>
+        <td><%= PAYMENT_METHODS[i.payment_method] || '' %></td>
+        <td><%- include('../partials/badge', { map: INVOICE_STATUS, status: i.status }) %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% } else { %><div class="empty">Chưa có hóa đơn.</div><% } %>
+</div>
+<%- include('../partials/footer') %>

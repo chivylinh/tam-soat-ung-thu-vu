@@ -1,0 +1,209 @@
+<%- include('../partials/header') %>
+<%
+  const editable = v.status !== 'cancelled';
+  const isDoctor = can('doctor');
+  const locked = (it) => it.invoice_id && paidInvoiceIds.has(it.invoice_id);
+%>
+<div class="page-head">
+  <div>
+    <div class="eyebrow"><%= v.dept_name || 'Chưa phân khoa' %><%= v.room ? ' · ' + v.room : '' %> · <%= fmtDate(v.visit_date) %></div>
+    <h1><span class="qnum"><%= v.queue_number %></span> <a href="/patients/<%= patient.id %>"><%= patient.full_name %></a></h1>
+    <div class="muted"><%= patient.code %> · <%= GENDERS[patient.gender] || '' %> · <%= age(patient.dob) %> · <%= patient.phone || '' %><%= patient.insurance_number ? ' · BHYT ' + patient.insurance_number : '' %></div>
+  </div>
+  <div class="actions">
+    <%- include('../partials/badge', { map: VISIT_STATUS, status: v.status }) %>
+    <% if (v.status === 'waiting' && isDoctor) { %>
+      <form method="post" action="/visits/<%= v.id %>/start" class="inline"><%- include('../partials/csrf') %><button class="btn primary">Bắt đầu khám</button></form>
+    <% } %>
+    <% if (v.status === 'done' && isDoctor) { %>
+      <form method="post" action="/visits/<%= v.id %>/reopen" class="inline"><%- include('../partials/csrf') %><button class="btn">Mở lại</button></form>
+    <% } %>
+    <a class="btn" href="/visits/<%= v.id %>/print" target="_blank">In phiếu khám / đơn thuốc</a>
+    <% if (can('cashier','receptionist') && editable) { %>
+      <form method="post" action="/invoices/from-visit/<%= v.id %>" class="inline"><%- include('../partials/csrf') %><button class="btn">Thu ngân</button></form>
+    <% } %>
+    <% if ((v.status === 'waiting' || v.status === 'in_progress') && can('receptionist','doctor')) { %>
+      <form method="post" action="/visits/<%= v.id %>/cancel" class="inline" data-confirm="Hủy lượt khám này?"><%- include('../partials/csrf') %><button class="btn danger">Hủy lượt</button></form>
+    <% } %>
+  </div>
+</div>
+<% if (patient.allergies) { %><div class="alert-allergy mb">⚠ Dị ứng: <%= patient.allergies %></div><% } %>
+
+<div class="grid grid-main">
+  <div>
+    <div class="card">
+      <h2>Khám lâm sàng</h2>
+      <form method="post" action="/visits/<%= v.id %>/exam">
+        <%- include('../partials/csrf') %>
+        <fieldset <%= isDoctor && editable ? '' : 'disabled' %> style="border:0;padding:0;margin:0">
+        <h3>Dấu hiệu sinh tồn</h3>
+        <div class="vitals">
+          <div class="field"><label>Mạch (l/ph)</label><input name="pulse" inputmode="numeric" value="<%= v.pulse ?? '' %>"></div>
+          <div class="field"><label>HA tâm thu</label><input name="bp_systolic" inputmode="numeric" value="<%= v.bp_systolic ?? '' %>"></div>
+          <div class="field"><label>HA tâm trương</label><input name="bp_diastolic" inputmode="numeric" value="<%= v.bp_diastolic ?? '' %>"></div>
+          <div class="field"><label>Nhiệt độ (°C)</label><input name="temperature" inputmode="decimal" value="<%= v.temperature ?? '' %>"></div>
+          <div class="field"><label>Nhịp thở</label><input name="resp_rate" inputmode="numeric" value="<%= v.resp_rate ?? '' %>"></div>
+          <div class="field"><label>SpO₂ (%)</label><input name="spo2" inputmode="numeric" value="<%= v.spo2 ?? '' %>"></div>
+          <div class="field"><label>Cân nặng (kg)</label><input name="weight" inputmode="decimal" value="<%= v.weight ?? '' %>"></div>
+          <div class="field"><label>Chiều cao (cm)</label><input name="height" inputmode="decimal" value="<%= v.height ?? '' %>"></div>
+          <div class="field"><label>BMI</label><input value="<%= bmi(v.weight, v.height) %>" disabled></div>
+        </div>
+        <div class="field"><label>Lý do khám</label><input value="<%= v.reason || '' %>" disabled></div>
+        <div class="field"><label>Bệnh sử / triệu chứng</label><textarea name="symptoms"><%= v.symptoms || '' %></textarea></div>
+        <div class="field"><label>Khám thực thể</label><textarea name="examination"><%= v.examination || '' %></textarea></div>
+        <div class="form-grid">
+          <div class="field" style="grid-column: span 2"><label>Chẩn đoán *</label><input name="diagnosis" value="<%= v.diagnosis || '' %>"></div>
+          <div class="field"><label>Mã ICD-10</label><input name="icd_code" value="<%= v.icd_code || '' %>" placeholder="VD: J06.9"></div>
+        </div>
+        <div class="field"><label>Hướng điều trị</label><textarea name="treatment_plan"><%= v.treatment_plan || '' %></textarea></div>
+        <div class="form-grid">
+          <div class="field" style="grid-column: span 2"><label>Lời dặn</label><input name="advice" value="<%= v.advice || '' %>"></div>
+          <div class="field"><label>Hẹn tái khám</label><input type="date" name="follow_up_date" value="<%= v.follow_up_date || '' %>"></div>
+        </div>
+        <% if (isDoctor && editable) { %>
+        <div class="actions">
+          <button class="btn" type="submit">Lưu</button>
+          <% if (v.status !== 'done') { %><button class="btn primary" type="submit" name="finish" value="1">Lưu &amp; kết thúc khám</button><% } %>
+        </div>
+        <% } %>
+        </fieldset>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Chỉ định dịch vụ / cận lâm sàng</h2></div>
+      <% if (services.length) { %>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Dịch vụ</th><th class="num">SL</th><th class="num">Đơn giá</th><th>Kết quả</th><th></th></tr></thead>
+        <tbody>
+        <% services.forEach(s => { %>
+          <tr>
+            <td><strong><%= s.name %></strong><div class="small muted"><%= s.category %><%= locked(s) ? ' · đã thanh toán' : '' %></div></td>
+            <td class="num"><%= s.quantity %></td>
+            <td class="num"><%= money(s.price) %></td>
+            <td style="min-width:220px">
+              <% if (s.category !== 'Khám' && can('doctor','technician') && editable) { %>
+                <form method="post" action="/visits/<%= v.id %>/services/<%= s.id %>/result" class="inline-form">
+                  <%- include('../partials/csrf') %>
+                  <textarea name="result" rows="2" style="min-height:40px;flex:1" placeholder="Nhập kết quả…"><%= s.result || '' %></textarea>
+                  <button class="btn small">Lưu</button>
+                </form>
+              <% } else { %><span style="white-space:pre-line"><%= s.result || '' %></span><% } %>
+            </td>
+            <td class="right">
+              <% if (!locked(s) && editable && can('doctor','receptionist')) { %>
+                <form method="post" action="/visits/<%= v.id %>/services/<%= s.id %>/delete" class="inline" data-confirm="Xóa chỉ định này?"><%- include('../partials/csrf') %><button class="btn small danger">Xóa</button></form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+      <% } else { %><div class="empty">Chưa có chỉ định.</div><% } %>
+      <% if (editable && can('doctor','receptionist')) { %>
+      <form method="post" action="/visits/<%= v.id %>/services" class="inline-form mt">
+        <%- include('../partials/csrf') %>
+        <div class="field" style="flex:1;min-width:240px"><label>Thêm chỉ định</label>
+          <select name="service_id" style="width:100%" required><option value="">— Chọn dịch vụ —</option>
+            <% let cat = null; allServices.forEach(s => { if (s.category !== cat) { if (cat !== null) { %></optgroup><% } cat = s.category; %><optgroup label="<%= cat %>"><% } %>
+              <option value="<%= s.id %>"><%= s.name %> — <%= money(s.price) %></option>
+            <% }); if (cat !== null) { %></optgroup><% } %>
+          </select>
+        </div>
+        <div class="field"><label>SL</label><input name="quantity" type="number" min="1" value="1" style="width:70px"></div>
+        <button class="btn primary">Thêm</button>
+      </form>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <h2>Đơn thuốc</h2>
+      <% if (prescription.length) { %>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Thuốc</th><th class="num">SL</th><th>Cách dùng</th><th class="num">Thành tiền</th><th></th></tr></thead>
+        <tbody>
+        <% prescription.forEach(m => { %>
+          <tr>
+            <td><strong><%= m.name %></strong><div class="small muted"><%= m.active_ingredient || '' %><%= locked(m) ? ' · đã xuất kho' : (m.stock < m.quantity ? ` · ⚠ kho còn ${m.stock}` : '') %></div></td>
+            <td class="num"><%= m.quantity %> <%= m.unit %></td>
+            <td><%= m.dosage || '' %><%= m.days ? ` (${m.days} ngày)` : '' %></td>
+            <td class="num"><%= money(m.price * m.quantity) %></td>
+            <td class="right">
+              <% if (!locked(m) && editable && isDoctor) { %>
+                <form method="post" action="/visits/<%= v.id %>/prescription/<%= m.id %>/delete" class="inline"><%- include('../partials/csrf') %><button class="btn small danger">Xóa</button></form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+      <% } else { %><div class="empty">Chưa kê thuốc.</div><% } %>
+      <% if (editable && isDoctor) { %>
+      <form method="post" action="/visits/<%= v.id %>/prescription" class="inline-form mt">
+        <%- include('../partials/csrf') %>
+        <div class="field" style="flex:1;min-width:220px"><label>Thuốc</label>
+          <select name="medicine_id" style="width:100%" required><option value="">— Chọn thuốc —</option>
+            <% medicines.forEach(m => { %><option value="<%= m.id %>"><%= m.name %> (<%= m.unit %>) — tồn <%= m.stock %></option><% }) %>
+          </select>
+        </div>
+        <div class="field"><label>Số lượng</label><input name="quantity" type="number" min="1" required style="width:90px"></div>
+        <div class="field"><label>Số ngày</label><input name="days" type="number" min="1" style="width:80px"></div>
+        <div class="field" style="flex:1;min-width:220px"><label>Cách dùng</label><input id="dosage" name="dosage" placeholder="VD: Uống 1 viên x 2 lần/ngày, sau ăn" style="width:100%"></div>
+        <div class="field"><label>Mẫu nhanh</label>
+          <select data-dosage-helper="#dosage"><option value="">—</option>
+            <option>Uống 1 viên x 2 lần/ngày (sáng, tối), sau ăn</option>
+            <option>Uống 1 viên x 3 lần/ngày, sau ăn</option>
+            <option>Uống 1 viên/ngày, buổi sáng</option>
+            <option>Uống 1 viên khi sốt ≥ 38,5°C, cách nhau 4–6 giờ</option>
+            <option>Pha 1 gói với 200ml nước, uống sau mỗi lần đi ngoài</option>
+          </select>
+        </div>
+        <button class="btn primary">Thêm</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Phân phòng / bác sĩ</h2>
+      <form method="post" action="/visits/<%= v.id %>/assign">
+        <%- include('../partials/csrf') %>
+        <fieldset <%= (v.status === 'waiting' || v.status === 'in_progress') && can('receptionist','doctor') ? '' : 'disabled' %> style="border:0;padding:0;margin:0">
+        <div class="field"><label>Chuyên khoa</label>
+          <select name="department_id"><% departments.forEach(d => { %><option value="<%= d.id %>" <%= v.department_id === d.id ? 'selected' : '' %>><%= d.name %></option><% }) %></select>
+        </div>
+        <div class="field"><label>Bác sĩ</label>
+          <select name="doctor_id"><option value="">—</option><% doctors.forEach(d => { %><option value="<%= d.id %>" <%= v.doctor_id === d.id ? 'selected' : '' %>><%= d.full_name %></option><% }) %></select>
+        </div>
+        <button class="btn small">Cập nhật</button>
+        </fieldset>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Thanh toán</h2>
+      <% if (invoices.length) { %>
+      <table><tbody>
+        <% invoices.forEach(i => { %>
+          <tr><td><a href="/invoices/<%= i.id %>"><%= i.code %></a></td><td class="num"><%= money(i.total) %></td><td><%- include('../partials/badge', { map: INVOICE_STATUS, status: i.status }) %></td></tr>
+        <% }) %>
+      </tbody></table>
+      <% } else { %><div class="muted">Chưa lập hóa đơn.</div><% } %>
+    </div>
+    <div class="card">
+      <h2>Tiền sử</h2>
+      <div style="white-space:pre-line"><%= patient.medical_history || 'Không ghi nhận.' %></div>
+    </div>
+    <div class="card">
+      <h2>Các lần khám trước</h2>
+      <% if (history.length) { %>
+        <table><tbody>
+        <% history.forEach(h => { %>
+          <tr><td class="nowrap"><a href="/visits/<%= h.id %>"><%= fmtDate(h.visit_date) %></a></td><td><%= h.icd_code ? h.icd_code + ' – ' : '' %><%= h.diagnosis %><div class="small muted"><%= h.dept_name || '' %></div></td></tr>
+        <% }) %>
+        </tbody></table>
+      <% } else { %><div class="muted">Lần khám đầu tiên.</div><% } %>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

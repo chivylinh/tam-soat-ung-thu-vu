@@ -1,0 +1,106 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Điều hành trung tâm · <%= fmtDate(today()) %></div>
+    <h1>Tổng quan hoạt động phòng khám</h1>
+    <div class="muted">Đón tiếp → Khám &amp; chỉ định → Cận lâm sàng → Kê đơn → Thu ngân &amp; cấp thuốc → Báo cáo.</div>
+  </div>
+  <div class="actions">
+    <% if (can('receptionist','doctor')) { %><a class="btn primary" href="/visits/new">+ Tiếp nhận bệnh nhân</a><% } %>
+    <a class="btn" href="/visits<%= user.role === 'doctor' ? '?mine=1' : '' %>">Vào hàng đợi khám</a>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="label">Lượt khám hôm nay</div><div class="value"><%= counts.waiting + counts.in_progress + counts.done %></div><div class="sub">Chờ <%= counts.waiting %> · Đang khám <%= counts.in_progress %></div></div>
+  <div class="kpi"><div class="label">Đã khám xong</div><div class="value"><%= counts.done %></div><div class="sub">BN mới đăng ký: <%= newPatients %></div></div>
+  <div class="kpi"><div class="label">Cận lâm sàng chờ KQ</div><div class="value <%= labPending ? 'warn' : '' %>"><%= labPending %></div><div class="sub"><a href="/lab">Xem danh sách</a></div></div>
+  <div class="kpi"><div class="label">Lịch hẹn chưa đến</div><div class="value"><%= apptToday %></div><div class="sub"><a href="/appointments">Lịch hôm nay</a></div></div>
+  <div class="kpi"><div class="label">Chưa thanh toán</div><div class="value <%= unpaid ? 'warn' : '' %>"><%= unpaid %></div><div class="sub">hóa đơn đang mở</div></div>
+  <% if (can('cashier')) { %>
+  <div class="kpi"><div class="label">Doanh thu hôm nay</div><div class="value money"><%= money(revenue.s) %></div><div class="sub"><%= revenue.n %> hóa đơn đã thu</div></div>
+  <% } %>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2>Sơ đồ trạng thái các phòng khám</h2>
+      <div class="muted small">ĐK: đã đăng ký · Chờ: đang chờ · Đang: đang khám · Xong: đã khám. Bấm vào phòng để xem hàng đợi.</div>
+    </div>
+    <a class="btn small" href="/display">Màn hình phòng chờ</a>
+  </div>
+  <div class="rooms">
+    <% rooms.forEach(r => { %>
+    <div class="room <%= r.waiting >= 5 ? 'busy' : '' %>">
+      <div class="room-top"><span class="room-name"><%= r.name %></span><% if (r.room) { %><span class="room-code"><%= r.room %></span><% } %></div>
+      <div class="room-stats">
+        <div><b><%= r.registered %></b>ĐK</div>
+        <div><b class="<%= r.waiting ? 'w' : '' %>"><%= r.waiting %></b>Chờ</div>
+        <div><b class="<%= r.in_progress ? 'i' : '' %>"><%= r.in_progress %></b>Đang</div>
+        <div><b><%= r.done %></b>Xong</div>
+      </div>
+      <div class="room-links">
+        <a href="/visits?department_id=<%= r.id %>">Vào hàng đợi</a>
+        <% if (can('receptionist','doctor')) { %><a href="/visits/new?department_id=<%= r.id %>">+ Tiếp nhận</a><% } %>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+</div>
+
+<div class="grid grid-main mt">
+  <div class="card">
+    <div class="card-head"><h2><%= user.role === 'doctor' ? 'Bệnh nhân đang chờ tôi / chưa phân bác sĩ' : 'Hàng đợi khám' %></h2><a href="/visits">Xem tất cả →</a></div>
+    <% if (queue.length) { %>
+    <div class="table-wrap"><table>
+      <thead><tr><th>STT</th><th>Bệnh nhân</th><th>Chuyên khoa</th><th>Bác sĩ</th><th>Trạng thái</th></tr></thead>
+      <tbody>
+      <% queue.forEach(v => { %>
+        <tr>
+          <td><span class="qnum"><%= v.queue_number %></span></td>
+          <td><a href="/visits/<%= v.id %>"><strong><%= v.full_name %></strong></a><div class="small muted"><%= v.code %> · <%= GENDERS[v.gender] || '' %> <%= age(v.dob) %></div></td>
+          <td><%= v.dept_name || '' %></td>
+          <td><%= v.doctor_name || '—' %></td>
+          <td><%- include('partials/badge', { map: VISIT_STATUS, status: v.status }) %></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+    <% } else { %><div class="empty">Không có bệnh nhân đang chờ.</div><% } %>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Lịch hẹn hôm nay</h2><a href="/appointments">Tất cả →</a></div>
+      <% if (upcoming.length) { %>
+        <table><tbody>
+        <% upcoming.forEach(a => { %>
+          <tr><td class="nowrap"><strong><%= fmtTime(a.scheduled_at) %></strong></td><td><%= a.full_name %><div class="small muted"><%= a.dept_name || '' %> · <%= a.phone || '' %></div></td></tr>
+        <% }) %>
+        </tbody></table>
+      <% } else { %><div class="empty">Không còn lịch hẹn.</div><% } %>
+    </div>
+    <div class="card">
+      <h2>Hẹn tái khám 7 ngày tới</h2>
+      <% if (followUps.length) { %>
+        <table><tbody>
+        <% followUps.forEach(f => { %>
+          <tr><td class="nowrap"><%= fmtDate(f.follow_up_date) %></td><td><a href="/patients/<%= f.patient_id %>"><%= f.full_name %></a><div class="small muted"><%= f.phone || '' %> · <%= f.diagnosis || '' %></div></td></tr>
+        <% }) %>
+        </tbody></table>
+      <% } else { %><div class="empty">Không có.</div><% } %>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Thuốc sắp hết</h2><a href="/pharmacy?filter=low">Kho thuốc →</a></div>
+      <% if (lowStock.length) { %>
+        <table><tbody>
+        <% lowStock.forEach(m => { %>
+          <tr><td><a href="/pharmacy/<%= m.id %>"><%= m.name %></a></td><td class="num"><span class="badge <%= m.stock === 0 ? 'danger' : 'warn' %>"><%= m.stock %> <%= m.unit %></span></td></tr>
+        <% }) %>
+        </tbody></table>
+      <% } else { %><div class="empty">Tồn kho ổn định.</div><% } %>
+    </div>
+  </div>
+</div>
+<%- include('partials/footer') %>
