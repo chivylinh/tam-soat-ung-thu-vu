@@ -1,0 +1,5 @@
+# Windows scripts: keep CRLF bytes exactly (also inside GitHub ZIP downloads)
+*.bat -text
+*.vbs -text
+*.ps1 -text
+config.env.example -text

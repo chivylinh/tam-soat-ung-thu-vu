@@ -1,6 +1,6 @@
 'use strict';
 // Fill the database with demo staff, patients and today's activity. Usage: npm run demo
-process.env.TZ = process.env.TZ || 'Asia/Ho_Chi_Minh';
+require('../src/config');
 const { db } = require('../src/db');
 const { hashPassword } = require('../src/auth');
 const clinical = require('../src/clinical');

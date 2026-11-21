@@ -1,14 +1,29 @@
 'use strict';
-process.env.TZ = process.env.TZ || 'Asia/Ho_Chi_Minh';
+require('./config');
 
+const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const express = require('express');
 const session = require('express-session');
-const { db } = require('./db');
+const { db, DB_PATH } = require('./db');
 const SqliteStore = require('./session-store');
 const helpers = require('./helpers');
 const { ROLES, hasRole } = require('./auth');
+
+/** SESSION_SECRET from env, else a random one persisted next to the database so restarts keep users logged in. */
+function sessionSecret() {
+  if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+  if (DB_PATH === ':memory:') return crypto.randomBytes(32).toString('hex');
+  const file = path.join(path.dirname(DB_PATH), '.session-secret');
+  try {
+    const s = fs.readFileSync(file, 'utf8').trim();
+    if (s.length >= 32) return s;
+  } catch { /* create below */ }
+  const s = crypto.randomBytes(32).toString('hex');
+  fs.writeFileSync(file, s, { mode: 0o600 });
+  return s;
+}
 
 function createApp() {
   const app = express();
@@ -30,16 +45,9 @@ function createApp() {
   app.use('/static', express.static(path.join(__dirname, '..', 'public'), { maxAge: '1h' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-  let secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    secret = crypto.randomBytes(32).toString('hex');
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('[cảnh báo] Chưa đặt SESSION_SECRET — phiên đăng nhập sẽ mất khi khởi động lại.');
-    }
-  }
   app.use(session({
     store: new SqliteStore(db),
-    secret,
+    secret: sessionSecret(),
     name: 'pk.sid',
     resave: false,
     saveUninitialized: false,
@@ -121,8 +129,16 @@ function createApp() {
 if (require.main === module) {
   const port = Number(process.env.PORT) || 3000;
   const host = process.env.HOST || '0.0.0.0';
-  createApp().listen(port, host, () => {
+  const server = createApp().listen(port, host, () => {
     console.log(`Phần mềm quản lý phòng khám đang chạy tại http://localhost:${port}`);
+    require('./backup').scheduleBackups();
+  });
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Cổng ${port} đang được dùng — có thể phần mềm đã chạy sẵn. Mở http://localhost:${port} hoặc đổi PORT trong config.env.`);
+      process.exit(1);
+    }
+    throw err;
   });
 }
 

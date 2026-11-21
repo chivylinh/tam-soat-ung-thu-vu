@@ -19,7 +19,25 @@
 
 **Vai trò:** Quản trị · Bác sĩ · Kỹ thuật viên CLS · Lễ tân · Thu ngân · Dược sĩ. Mỗi vai trò chỉ thấy và thao tác được phần việc của mình.
 
-## Cài đặt & chạy
+## Chạy trên Windows (bấm đúp)
+
+1. Cài **Node.js bản LTS** (22.13 trở lên) từ https://nodejs.org.
+2. Tải mã nguồn và giải nén, ví dụ vào `C:\phongkham`.
+3. Mở thư mục `clinic` rồi bấm đúp các file sau:
+
+| File | Tác dụng |
+|---|---|
+| `CHAY-PHAN-MEM.bat` | Chạy phần mềm và mở trình duyệt. Lần đầu tự cài thư viện (cần Internet). Giữ cửa sổ mở trong lúc dùng. Nếu phần mềm đang chạy ngầm thì chỉ mở trình duyệt |
+| `TU-KHOI-DONG-BAT.bat` | Bật tự chạy ngầm mỗi khi đăng nhập Windows (không hiện cửa sổ; nhật ký ở `data\server.log`) |
+| `TU-KHOI-DONG-TAT.bat` | Tắt tự khởi động |
+| `DUNG-PHAN-MEM.bat` | Dừng phần mềm đang chạy ngầm |
+| `SAO-LUU-NGAY.bat` | Sao lưu dữ liệu ngay vào `data\backups` |
+
+Lần chạy đầu sẽ tạo file `config.env`. Mở bằng Notepad để đổi **tên phòng khám**, **cổng** hoặc **thư mục sao lưu** (ví dụ ổ D hoặc thư mục OneDrive/Google Drive), rồi chạy lại phần mềm.
+
+**Sao lưu tự động:** khi đang chạy, phần mềm tự sao lưu mỗi ngày một bản vào `data\backups` (giữ 30 bản gần nhất). Khôi phục: dừng phần mềm, chép bản sao lưu đè lên `data\clinic.db`.
+
+## Cài đặt & chạy (dòng lệnh, mọi hệ điều hành)
 
 Yêu cầu: **Node.js 22.13 trở lên** (dữ liệu lưu bằng SQLite tích hợp sẵn, không cần cài cơ sở dữ liệu riêng).
 
@@ -37,16 +55,20 @@ Dữ liệu mẫu để dùng thử (8 nhân viên, 10 bệnh nhân, lượt kh�
 npm run demo && npm start
 ```
 
-Chạy kiểm thử: `npm test`
+Chạy kiểm thử: `npm test` · Sao lưu thủ công: `npm run backup`
 
-### Biến môi trường
+### Cấu hình
+
+Đặt trong file `config.env` (xem `config.env.example`) hoặc bằng biến môi trường. Biến môi trường được ưu tiên.
 
 | Biến | Ý nghĩa | Mặc định |
 |---|---|---|
 | `PORT` | Cổng web | `3000` |
 | `CLINIC_NAME` | Tên phòng khám hiển thị và in trên phiếu | `Phòng khám Đa khoa` |
 | `DB_PATH` | Đường dẫn file dữ liệu | `data/clinic.db` |
-| `SESSION_SECRET` | Chuỗi bí mật cho phiên đăng nhập (**bắt buộc khi chạy thật**) | ngẫu nhiên mỗi lần chạy |
+| `SESSION_SECRET` | Chuỗi bí mật cho phiên đăng nhập | tự tạo và lưu ở `data/.session-secret` |
+| `BACKUP_DIR` | Thư mục sao lưu hằng ngày | `data/backups` |
+| `BACKUP_KEEP` | Số bản sao lưu giữ lại | `30` |
 | `ADMIN_PASSWORD` | Mật khẩu admin khi tạo dữ liệu lần đầu | `admin123` |
 | `COOKIE_SECURE` | `1` khi chạy sau HTTPS | tắt |
 | `TRUST_PROXY` | `1` khi chạy sau Nginx / reverse proxy | tắt |
@@ -54,8 +76,8 @@ Chạy kiểm thử: `npm test`
 
 ## Đưa vào sử dụng thật — lưu ý
 
-- **Sao lưu** file `data/clinic.db` hằng ngày (ví dụ chép sang ổ khác / lưu trữ đám mây). Khi sao lưu lúc đang chạy, dùng `sqlite3 data/clinic.db ".backup backup.db"`.
-- Chạy sau **HTTPS** (Nginx + Let's Encrypt) nếu truy cập qua Internet; đặt `SESSION_SECRET`, `COOKIE_SECURE=1`, `TRUST_PROXY=1`.
+- **Sao lưu ra ngoài máy:** bản sao lưu tự động nằm cùng ổ đĩa với dữ liệu. Nên đặt `BACKUP_DIR` sang ổ khác hoặc thư mục đồng bộ đám mây, phòng khi hỏng máy.
+- Chạy sau **HTTPS** (Nginx + Let's Encrypt) nếu truy cập qua Internet; đặt `COOKIE_SECURE=1`, `TRUST_PROXY=1`.
 - Dữ liệu sức khỏe là dữ liệu cá nhân nhạy cảm theo **Nghị định 13/2023/NĐ-CP**: phân quyền đúng người, khóa tài khoản nhân viên nghỉ việc, xem nhật ký hoạt động định kỳ.
 - Chưa có: kết nối cổng giám định BHYT (xuất XML theo QĐ 4750/130), kết nối máy xét nghiệm (LIS/HL7), lưu ảnh DICOM (PACS), hóa đơn điện tử, chữ ký số bệnh án điện tử theo Thông tư 46/2018 & 13/2025/TT-BYT. Các phần này cần làm thêm tùy nhu cầu.
 
@@ -69,6 +91,9 @@ clinic/
   src/routes/          từng màn hình (patients, visits, appointments, lab, invoices, pharmacy, reports, admin…)
   views/               giao diện (EJS)
   public/              CSS, JS
-  scripts/demo-data.js tạo dữ liệu mẫu
+  src/config.js        đọc config.env
+  src/backup.js        sao lưu tự động hằng ngày
+  scripts/             tạo dữ liệu mẫu, sao lưu thủ công, script PowerShell cho Windows
+  *.bat, chay-an.vbs   các file bấm đúp trên Windows
   test/                kiểm thử toàn bộ quy trình
 ```
