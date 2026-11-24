@@ -24,6 +24,7 @@ function readMed(body) {
   const m = {
     code: str(body.code), name: str(body.name), active_ingredient: str(body.active_ingredient), unit: str(body.unit) || 'viên',
     price: int(body.price) ?? 0, min_stock: int(body.min_stock) ?? 0, expiry_date: str(body.expiry_date), active: body.active === '0' ? 0 : 1,
+    bhyt_code: str(body.bhyt_code), strength: str(body.strength), route: str(body.route), reg_no: str(body.reg_no),
   };
   const errors = [];
   if (!m.name) errors.push('Vui lòng nhập tên thuốc.');
@@ -42,8 +43,8 @@ router.post('/', requireRole('pharmacist'), (req, res) => {
   if (m.code && db.prepare('SELECT 1 FROM medicines WHERE code = ?').get(m.code)) errors.push('Mã thuốc đã tồn tại.');
   if (errors.length) return res.status(400).render('pharmacy/form', { title: 'Thêm thuốc', m: { ...m, stock: initial }, errors, action: '/pharmacy' });
   tx(() => {
-    const r = db.prepare(`INSERT INTO medicines (code, name, active_ingredient, unit, price, stock, min_stock, expiry_date, active)
-      VALUES (?,?,?,?,?,?,?,?,?)`).run(m.code, m.name, m.active_ingredient, m.unit, m.price, initial, m.min_stock, m.expiry_date, m.active);
+    const r = db.prepare(`INSERT INTO medicines (code, name, active_ingredient, unit, price, stock, min_stock, expiry_date, active, bhyt_code, strength, route, reg_no)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(m.code, m.name, m.active_ingredient, m.unit, m.price, initial, m.min_stock, m.expiry_date, m.active, m.bhyt_code, m.strength, m.route, m.reg_no);
     const id = Number(r.lastInsertRowid);
     if (initial) db.prepare('INSERT INTO stock_movements (medicine_id, change, reason, user_id) VALUES (?,?,?,?)').run(id, initial, 'Tồn đầu kỳ', req.user.id);
     audit(req.user.id, 'create', 'medicine', id);
@@ -73,8 +74,9 @@ router.post('/:id', requireRole('pharmacist'), loadMed, (req, res) => {
   const { m, errors } = readMed(req.body);
   if (m.code && db.prepare('SELECT 1 FROM medicines WHERE code = ? AND id != ?').get(m.code, req.med.id)) errors.push('Mã thuốc đã tồn tại.');
   if (errors.length) return res.status(400).render('pharmacy/form', { title: 'Sửa thông tin thuốc', m: { ...m, id: req.med.id, stock: req.med.stock }, errors, action: `/pharmacy/${req.med.id}` });
-  db.prepare(`UPDATE medicines SET code = ?, name = ?, active_ingredient = ?, unit = ?, price = ?, min_stock = ?, expiry_date = ?, active = ? WHERE id = ?`)
-    .run(m.code, m.name, m.active_ingredient, m.unit, m.price, m.min_stock, m.expiry_date, m.active, req.med.id);
+  db.prepare(`UPDATE medicines SET code = ?, name = ?, active_ingredient = ?, unit = ?, price = ?, min_stock = ?, expiry_date = ?, active = ?,
+      bhyt_code = ?, strength = ?, route = ?, reg_no = ? WHERE id = ?`)
+    .run(m.code, m.name, m.active_ingredient, m.unit, m.price, m.min_stock, m.expiry_date, m.active, m.bhyt_code, m.strength, m.route, m.reg_no, req.med.id);
   audit(req.user.id, 'update', 'medicine', req.med.id);
   req.flash('ok', 'Đã cập nhật thuốc.');
   res.redirect(`/pharmacy/${req.med.id}`);

@@ -35,6 +35,7 @@
         <% if (can('receptionist','doctor')) { %><%- navLink('/visits/new', 'Tiếp nhận bệnh nhân', { exact: true }) %><% } %>
         <%- path === '/visits/new' ? `<a href="/visits"><span class="dot"></span>Hàng đợi &amp; phòng khám</a>` : navLink('/visits', 'Hàng đợi &amp; phòng khám') %>
         <%- navLink('/appointments', 'Lịch hẹn') %>
+        <% if (can('receptionist','doctor')) { %><%- navLink('/reminders', 'Nhắc lịch hẹn &amp; tái khám') %><% } %>
         <%- navLink('/patients', 'Hồ sơ bệnh nhân') %>
       </div>
       <div class="nav-group">
@@ -45,6 +46,7 @@
         <div class="nav-title">Viện phí &amp; dược</div>
         <% if (can('cashier','receptionist')) { %><%- navLink('/invoices', 'Thu ngân') %><% } %>
         <%- navLink('/pharmacy', 'Kho thuốc') %>
+        <% if (can('cashier')) { %><%- navLink('/bhyt', 'Xuất XML BHYT') %><% } %>
       </div>
       <% if (can('cashier')) { %>
       <div class="nav-group">

@@ -9,6 +9,7 @@
  */
 const { db, tx, audit } = require('./db');
 const { today, nowStr } = require('./helpers');
+const bhyt = require('./bhyt');
 
 class UserError extends Error {
   constructor(message, status = 400) {
@@ -19,14 +20,14 @@ class UserError extends Error {
 }
 
 /** Create a visit (lượt khám) and assign the next queue number for the day/department. */
-function createVisit({ patientId, departmentId, doctorId, reason, serviceId, userId, date = today() }) {
+function createVisit({ patientId, departmentId, doctorId, reason, serviceId, userId, bhyt: useBhyt = false, date = today() }) {
   return tx(() => {
     const patient = db.prepare('SELECT id FROM patients WHERE id = ?').get(patientId);
     if (!patient) throw new UserError('Không tìm thấy bệnh nhân.');
     const q = db.prepare(`SELECT COALESCE(MAX(queue_number),0) + 1 AS n FROM visits
       WHERE visit_date = ? AND COALESCE(department_id,0) = COALESCE(?,0)`).get(date, departmentId ?? null).n;
-    const r = db.prepare(`INSERT INTO visits (patient_id, department_id, doctor_id, visit_date, queue_number, reason, created_by)
-      VALUES (?,?,?,?,?,?,?)`).run(patientId, departmentId ?? null, doctorId ?? null, date, q, reason ?? null, userId);
+    const r = db.prepare(`INSERT INTO visits (patient_id, department_id, doctor_id, visit_date, queue_number, reason, created_by, bhyt)
+      VALUES (?,?,?,?,?,?,?,?)`).run(patientId, departmentId ?? null, doctorId ?? null, date, q, reason ?? null, userId, useBhyt ? 1 : 0);
     const visitId = Number(r.lastInsertRowid);
     if (serviceId) addService(visitId, serviceId, userId, 1);
     audit(userId, 'create', 'visit', visitId);
@@ -116,21 +117,30 @@ function syncInvoice(visitId, userId) {
         (SELECT id FROM invoices WHERE status != 'paid'))`).run(inv.id, visitId);
     }
     db.prepare('DELETE FROM invoice_items WHERE invoice_id = ?').run(inv.id);
-    const ins = db.prepare(`INSERT INTO invoice_items (invoice_id, item_type, ref_id, description, quantity, unit_price, amount)
-                            VALUES (?,?,?,?,?,?,?)`);
+    const ins = db.prepare(`INSERT INTO invoice_items (invoice_id, item_type, ref_id, description, quantity, unit_price, amount, bhyt_covered)
+                            VALUES (?,?,?,?,?,?,?,?)`);
+    const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(visit.patient_id);
+    const { rate } = bhyt.effectiveRate(visit, patient);
     let subtotal = 0;
-    for (const s of db.prepare(`SELECT vs.*, s.name FROM visit_services vs JOIN services s ON s.id = vs.service_id
+    let insurance = 0;
+    const add = (type, refId, desc, qty, price, code) => {
+      const amount = price * qty;
+      const covered = rate > 0 && !!code;
+      ins.run(inv.id, type, refId, desc, qty, price, amount, covered ? 1 : 0);
+      subtotal += amount;
+      insurance += bhyt.split(amount, covered, rate).bhtt;
+    };
+    for (const s of db.prepare(`SELECT vs.*, s.name, s.bhyt_code FROM visit_services vs JOIN services s ON s.id = vs.service_id
                                  WHERE vs.invoice_id = ? ORDER BY vs.id`).all(inv.id)) {
-      ins.run(inv.id, 'service', s.service_id, s.name, s.quantity, s.price, s.price * s.quantity);
-      subtotal += s.price * s.quantity;
+      add('service', s.service_id, s.name, s.quantity, s.price, s.bhyt_code);
     }
-    for (const m of db.prepare(`SELECT pi.*, m.name, m.unit FROM prescription_items pi JOIN medicines m ON m.id = pi.medicine_id
+    for (const m of db.prepare(`SELECT pi.*, m.name, m.unit, m.bhyt_code FROM prescription_items pi JOIN medicines m ON m.id = pi.medicine_id
                                  WHERE pi.invoice_id = ? ORDER BY pi.id`).all(inv.id)) {
-      ins.run(inv.id, 'medicine', m.medicine_id, `${m.name} (${m.unit})`, m.quantity, m.price, m.price * m.quantity);
-      subtotal += m.price * m.quantity;
+      add('medicine', m.medicine_id, `${m.name} (${m.unit})`, m.quantity, m.price, m.bhyt_code);
     }
-    const discount = Math.min(inv.discount, subtotal);
-    db.prepare('UPDATE invoices SET subtotal = ?, discount = ?, total = ? WHERE id = ?').run(subtotal, discount, subtotal - discount, inv.id);
+    const discount = Math.min(inv.discount, subtotal - insurance);
+    db.prepare('UPDATE invoices SET subtotal = ?, insurance_amount = ?, discount = ?, total = ? WHERE id = ?')
+      .run(subtotal, insurance, discount, subtotal - insurance - discount, inv.id);
     return inv.id;
   });
 }
@@ -146,7 +156,8 @@ function payInvoice(invoiceId, { method, discount, note }, userId) {
     if (inv.status !== 'unpaid') throw new UserError('Hóa đơn này đã được xử lý.');
     const nItems = db.prepare('SELECT COUNT(*) AS n FROM invoice_items WHERE invoice_id = ?').get(inv.id).n;
     if (nItems === 0) throw new UserError('Hóa đơn không có khoản nào để thanh toán.');
-    const disc = Math.max(0, Math.min(discount || 0, inv.subtotal));
+    const payable = inv.subtotal - inv.insurance_amount;
+    const disc = Math.max(0, Math.min(discount || 0, payable));
     const meds = db.prepare(`SELECT ref_id, SUM(quantity) AS qty FROM invoice_items
       WHERE invoice_id = ? AND item_type = 'medicine' GROUP BY ref_id`).all(inv.id);
     for (const m of meds) {
@@ -161,8 +172,8 @@ function payInvoice(invoiceId, { method, discount, note }, userId) {
         .run(m.ref_id, -m.qty, 'Xuất theo đơn', inv.code, userId);
     }
     db.prepare(`UPDATE invoices SET status = 'paid', discount = ?, total = ?, payment_method = ?, note = ?, paid_at = ?, cashier_id = ?
-                WHERE id = ?`).run(disc, inv.subtotal - disc, method, note ?? null, nowStr(), userId, inv.id);
-    audit(userId, 'pay', 'invoice', inv.id, `total=${inv.subtotal - disc}`);
+                WHERE id = ?`).run(disc, payable - disc, method, note ?? null, nowStr(), userId, inv.id);
+    audit(userId, 'pay', 'invoice', inv.id, `total=${payable - disc}`);
   });
 }
 

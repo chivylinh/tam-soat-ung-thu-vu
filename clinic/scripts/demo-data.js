@@ -24,8 +24,20 @@ const staff = [
   ['thungan', 'Bùi Thanh Tâm', 'cashier', null, null],
   ['duocsi', 'Hoàng Gia Bảo', 'pharmacist', null, 'DS'],
 ];
-const ins = db.prepare('INSERT INTO users (username, password_hash, full_name, role, department_id, title) VALUES (?,?,?,?,?,?)');
-for (const [u, n, r, d, t] of staff) ins.run(u, pw, n, r, d ? dept(d) : null, t);
+const ins = db.prepare('INSERT INTO users (username, password_hash, full_name, role, department_id, title, license_no) VALUES (?,?,?,?,?,?,?)');
+staff.forEach(([u, n, r, d, t], i) => ins.run(u, pw, n, r, d ? dept(d) : null, t, r === 'doctor' ? `00${1200 + i}/HNO-CCHN` : null));
+
+// Demo BHYT codes (illustrative only — replace with the codes from the BHYT catalogue)
+for (const [name, code] of [['Nội tổng quát', 'K01'], ['Nhi', 'K02'], ['Tai - Mũi - Họng', 'K29'], ['Sản - Phụ khoa', 'K25'], ['Da liễu', 'K12']]) {
+  db.prepare('UPDATE departments SET bhyt_code = ? WHERE name = ?').run(code, name);
+}
+for (const [code, bh] of [['KB01', '01.1900.1778'], ['KB03', '01.1900.1778'], ['KB04', '01.1900.1778'], ['KB05', '01.1900.1778'],
+  ['KB08', '01.1900.1778'], ['XN01', '22.0121.1369'], ['XN02', '23.0075.1494'], ['XN07', '23.0083.1523'], ['CD04', '18.0119.0028'], ['CD05', '21.0014.1778']]) {
+  db.prepare('UPDATE services SET bhyt_code = ? WHERE code = ?').run(bh, code);
+}
+for (const [code, bh, strength] of [['T001', '40.17', '500mg'], ['T002', '40.149', '500mg'], ['T003', '40.193', '500mg'], ['T006', '40.676', '500mg'], ['T007', '40.497', '5mg']]) {
+  db.prepare(`UPDATE medicines SET bhyt_code = ?, strength = ?, route = 'Uống' WHERE code = ?`).run(bh, strength, code);
+}
 const uid = (u) => db.prepare('SELECT id FROM users WHERE username = ?').get(u).id;
 
 const people = [
@@ -42,14 +54,16 @@ const people = [
 ];
 const admin = uid('admin');
 const pids = people.map(([full_name, gender, dob, phone, address], i) => createPatient({
-  full_name, gender, dob, phone, address, id_number: null, insurance_number: i % 3 === 0 ? `DN40101${String(1000000 + i)}` : null,
+  full_name, gender, dob, phone, address, id_number: null, insurance_number: i % 3 === 0 ? `DN401${String(1000000000 + i)}` : null,
   occupation: null, allergies: i === 0 ? 'Penicillin' : null, medical_history: i === 4 ? 'Tăng huyết áp 10 năm, đang dùng Amlodipin' : null, emergency_contact: null,
+  insurance_valid_from: i % 3 === 0 ? `${today().slice(0, 4)}-01-01` : null, insurance_valid_to: i % 3 === 0 ? `${today().slice(0, 4)}-12-31` : null,
+  insurance_reg_place: i % 3 === 0 ? '01001' : null, insurance_benefit: null,
 }, admin));
 
 const svc = (code) => db.prepare('SELECT id FROM services WHERE code = ?').get(code).id;
 const med = (code) => db.prepare('SELECT id FROM medicines WHERE code = ?').get(code).id;
 const plan = [
-  [0, 'Nội tổng quát', 'KB01', 'bs.minh', 'Sốt, ho 3 ngày', 'done', 'Viêm phế quản cấp', 'J20.9', ['XN01', 'CD04'], [['T003', 14], ['T001', 10]]],
+  [0, 'Nội tổng quát', 'KB01', 'bs.minh', 'Sốt, ho 3 ngày', 'done', 'Viêm phế quản cấp', 'J20.9', ['XN01', 'CD04'], [['T003', 14], ['T001', 10]], true],
   [4, 'Nội tổng quát', 'KB01', 'bs.minh', 'Kiểm tra huyết áp định kỳ', 'done', 'Tăng huyết áp vô căn', 'I10', ['XN03', 'CD05'], [['T007', 30]]],
   [7, 'Nội tổng quát', 'KB01', 'bs.minh', 'Mệt mỏi, khát nước', 'in_progress', null, null, ['XN02', 'XN07'], []],
   [8, 'Nội tổng quát', 'KB01', null, 'Đau thượng vị', 'waiting', null, null, [], []],
@@ -60,13 +74,22 @@ const plan = [
   [3, 'Sản - Phụ khoa', 'KB04', 'bs.thu', 'Khám phụ khoa định kỳ', 'waiting', null, null, [], []],
   [5, 'Da liễu', 'KB08', null, 'Nổi mẩn ngứa', 'waiting', null, null, [], []],
 ];
-for (const [pi, d, s, doc, reason, status, dx, icd, orders, rx] of plan) {
-  const vid = clinical.createVisit({ patientId: pids[pi], departmentId: dept(d), doctorId: doc ? uid(doc) : null, reason, serviceId: svc(s), userId: uid('letan') });
+for (const [pi, d, s, doc, reason, status, dx, icd, orders, rx, useBhyt] of plan) {
+  const vid = clinical.createVisit({ patientId: pids[pi], departmentId: dept(d), doctorId: doc ? uid(doc) : null, reason, serviceId: svc(s), userId: uid('letan'), bhyt: !!useBhyt });
   for (const o of orders) clinical.addService(vid, svc(o), doc ? uid(doc) : admin);
   for (const [m, q] of rx) clinical.addPrescription(vid, { medicineId: med(m), quantity: q, dosage: 'Uống 1 viên x 2 lần/ngày, sau ăn', days: 7 });
   db.prepare(`UPDATE visits SET status = ?, diagnosis = ?, icd_code = ?, pulse = 82, bp_systolic = 125, bp_diastolic = 80, temperature = 37.2,
-    weight = 62, height = 165, follow_up_date = ? WHERE id = ?`).run(status, dx, icd, dx ? addDays(today(), 5) : null, vid);
-  if (orders.includes('XN01')) db.prepare(`UPDATE visit_services SET result = 'WBC 11.8 G/L, NEU 78%' WHERE visit_id = ? AND service_id = ?`).run(vid, svc('XN01'));
+    weight = 62, height = 165, follow_up_date = ?, started_at = datetime('now','localtime','-40 minutes'),
+    finished_at = CASE WHEN ? = 'done' THEN datetime('now','localtime','-10 minutes') END WHERE id = ?`)
+    .run(status, dx, icd, dx ? addDays(today(), pi === 4 ? 1 : 5) : null, status, vid);
+  if (orders.includes('XN01')) {
+    db.prepare(`UPDATE visit_services SET result = ?, result_at = datetime('now','localtime','-20 minutes'), result_by = ? WHERE visit_id = ? AND service_id = ?`)
+      .run('WBC 11.8 G/L (tăng)\nNEU 78%\nHGB 138 g/L\nPLT 265 G/L', uid('ktv.nam'), vid, svc('XN01'));
+  }
+  if (orders.includes('CD04')) {
+    db.prepare(`UPDATE visit_services SET result = ?, result_at = datetime('now','localtime','-15 minutes'), result_by = ? WHERE visit_id = ? AND service_id = ?`)
+      .run('Tăng đậm nhẹ rốn phổi hai bên. Không thấy tổn thương nhu mô khu trú. Bóng tim không to.', uid('ktv.nam'), vid, svc('CD04'));
+  }
   if (status === 'done') {
     const inv = clinical.syncInvoice(vid, uid('thungan'));
     clinical.payInvoice(inv, { method: pi % 2 ? 'transfer' : 'cash', discount: 0 }, uid('thungan'));
@@ -80,6 +103,8 @@ db.prepare(`INSERT INTO appointments (patient_id, department_id, doctor_id, sche
   .run(pids[1], dept('Sản - Phụ khoa'), uid('bs.thu'), `${today()} 15:30:00`, 'Siêu âm thai', uid('letan'));
 db.prepare(`INSERT INTO appointments (patient_id, department_id, doctor_id, scheduled_at, reason, created_by) VALUES (?,?,?,?,?,?)`)
   .run(pids[4], dept('Nội tổng quát'), uid('bs.minh'), `${addDays(today(), 1)} 08:00:00`, 'Tái khám huyết áp', uid('letan'));
+db.prepare(`INSERT INTO appointments (patient_id, department_id, doctor_id, scheduled_at, reason, created_by) VALUES (?,?,?,?,?,?)`)
+  .run(pids[6], dept('Nhi'), uid('bs.lan'), `${addDays(today(), 1)} 09:30:00`, 'Tái khám tiêu chảy', uid('letan'));
 db.prepare(`UPDATE medicines SET stock = 8 WHERE code = 'T012'`).run();
 
 console.log('Đã tạo dữ liệu mẫu. Tài khoản nhân viên (mật khẩu: matkhau123):');

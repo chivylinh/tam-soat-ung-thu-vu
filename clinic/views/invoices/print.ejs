@@ -7,14 +7,15 @@
   <div class="print-head"><div><strong><%= clinicName.toUpperCase() %></strong></div><div class="right small">Số: <%= inv.code %><br><%= fmtDateTime(inv.paid_at || inv.created_at) %></div></div>
   <div class="print-title">Phiếu thu viện phí</div>
   <% if (inv.status !== 'paid') { %><p class="right"><span class="badge warn"><%= INVOICE_STATUS[inv.status][0] %></span></p><% } %>
-  <dl class="kv"><dt>Bệnh nhân</dt><dd><strong><%= patient.full_name %></strong> (<%= patient.code %>)</dd><dt>Chuyên khoa</dt><dd><%= visit.dept_name || '' %></dd></dl>
+  <dl class="kv"><dt>Bệnh nhân</dt><dd><strong><%= patient.full_name %></strong> (<%= patient.code %>)</dd><dt>Chuyên khoa</dt><dd><%= visit.dept_name || '' %></dd><% if (visit.bhyt) { %><dt>Thẻ BHYT</dt><dd><%= patient.insurance_number %></dd><% } %></dl>
   <table class="mt">
     <thead><tr><th>#</th><th>Nội dung</th><th class="num">SL</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th></tr></thead>
     <tbody><% items.forEach((it, i) => { %><tr><td><%= i + 1 %></td><td><%= it.description %></td><td class="num"><%= it.quantity %></td><td class="num"><%= money(it.unit_price) %></td><td class="num"><%= money(it.amount) %></td></tr><% }) %></tbody>
     <tfoot>
       <tr><td colspan="4" class="right">Tạm tính</td><td class="num"><%= money(inv.subtotal) %></td></tr>
+      <% if (inv.insurance_amount) { %><tr><td colspan="4" class="right">BHYT chi trả</td><td class="num">−<%= money(inv.insurance_amount) %></td></tr><% } %>
       <% if (inv.discount) { %><tr><td colspan="4" class="right">Giảm giá</td><td class="num">−<%= money(inv.discount) %></td></tr><% } %>
-      <tr><td colspan="4" class="right">Tổng cộng</td><td class="num"><%= money(inv.total) %></td></tr>
+      <tr><td colspan="4" class="right">Người bệnh trả</td><td class="num"><%= money(inv.total) %></td></tr>
     </tfoot>
   </table>
   <p>Hình thức: <%= PAYMENT_METHODS[inv.payment_method] || '' %></p>

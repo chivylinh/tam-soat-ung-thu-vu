@@ -1,0 +1,49 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><div class="eyebrow">Bảo hiểm y tế</div><h1>Xuất XML giám định BHYT</h1><div class="muted">Lượt khám BHYT đã kết thúc từ <%= fmtDate(from) %> đến <%= fmtDate(to) %></div></div>
+  <form class="filters" method="get" action="/bhyt" style="margin:0">
+    <input type="date" name="from" value="<%= from %>"> <input type="date" name="to" value="<%= to %>"> <button class="btn">Xem</button>
+  </form>
+</div>
+<div class="flash error">
+  <strong>Bản thử nghiệm.</strong> Cấu trúc file theo QĐ 130/QĐ-BYT và QĐ 4750/QĐ-BYT nhưng <strong>chưa được đối chiếu với phụ lục chính thức</strong>, chưa có chữ ký số.
+  Hãy nộp thử trên cổng kiểm thử của BHXH và nhờ đơn vị giám định xác nhận trước khi dùng để quyết toán.
+</div>
+<% if (!cfg.maCSKCB) { %><div class="flash error">Chưa cấu hình mã cơ sở KCB. Thêm dòng <code>BHYT_MA_CSKCB=...</code> vào file <code>config.env</code> rồi khởi động lại.</div><% } %>
+<div class="kpis">
+  <div class="kpi"><div class="label">Hồ sơ</div><div class="value"><%= rows.length %></div><div class="sub"><%= rows.filter(r => !r.errors.length).length %> hợp lệ · <%= rows.filter(r => r.errors.length).length %> lỗi</div></div>
+  <div class="kpi"><div class="label">Tổng chi phí (hợp lệ)</div><div class="value money"><%= money(sum.bv) %></div></div>
+  <div class="kpi"><div class="label">Đề nghị BHYT thanh toán</div><div class="value money"><%= money(sum.bhtt) %></div></div>
+  <div class="kpi"><div class="label">Người bệnh trả</div><div class="value money"><%= money(sum.bn) %></div><div class="sub">Dưới <%= money(threshold) %>/lượt: BHYT trả 100%</div></div>
+</div>
+<div class="card">
+  <form method="post" action="/bhyt/export">
+    <%- include('partials/csrf') %>
+    <input type="hidden" name="from" value="<%= from %>"><input type="hidden" name="to" value="<%= to %>">
+    <div class="card-head"><h2>Danh sách hồ sơ</h2><button class="btn primary" <%= rows.some(r => !r.errors.length) ? '' : 'disabled' %>>Tải file XML (hồ sơ đã chọn)</button></div>
+    <% if (rows.length) { %>
+    <div class="table-wrap"><table>
+      <thead><tr><th></th><th>Ngày</th><th>Bệnh nhân</th><th>Thẻ BHYT</th><th>Chẩn đoán</th><th class="num">Tổng</th><th class="num">BHYT trả</th><th>Kiểm tra</th><th></th></tr></thead>
+      <tbody>
+      <% rows.forEach(r => { %>
+        <tr>
+          <td><input type="checkbox" name="visit_id" value="<%= r.v.id %>" style="width:auto" <%= r.errors.length ? 'disabled' : 'checked' %>></td>
+          <td class="nowrap"><%= fmtDate(r.v.visit_date) %></td>
+          <td><a href="/visits/<%= r.v.id %>"><strong><%= r.p.full_name %></strong></a><div class="small muted"><%= r.p.code %></div></td>
+          <td><%= r.p.insurance_number || '' %><div class="small muted">Mức hưởng <%= r.rate %>%</div></td>
+          <td><%= r.v.icd_code || '' %> <%= r.v.diagnosis || '' %></td>
+          <td class="num"><%= money(r.totals.bv) %></td><td class="num"><%= money(r.totals.bhtt) %></td>
+          <td style="min-width:220px">
+            <% if (r.errors.length) { %><span class="badge danger">Lỗi</span><ul class="small" style="margin:4px 0;padding-left:16px;color:var(--danger)"><% r.errors.forEach(e => { %><li><%= e %></li><% }) %></ul>
+            <% } else { %><span class="badge ok">Hợp lệ</span><% } %>
+            <% if (r.warnings.length) { %><ul class="small muted" style="margin:4px 0;padding-left:16px"><% r.warnings.forEach(w => { %><li><%= w %></li><% }) %></ul><% } %>
+          </td>
+          <td><a class="btn small" href="/bhyt/visit/<%= r.v.id %>">Xem XML</a></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+    <% } else { %><div class="empty">Không có lượt khám BHYT đã kết thúc trong khoảng này.</div><% } %>
+  </form>
+</div>
+<%- include('partials/footer') %>

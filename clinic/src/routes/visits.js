@@ -5,6 +5,7 @@ const { requireLogin, requireRole } = require('../auth');
 const { str, int, num, isDate, today, nowStr, VISIT_STATUS } = require('../helpers');
 const clinical = require('../clinical');
 const { searchPatients } = require('./patients');
+const bhyt = require('../bhyt');
 
 const router = express.Router();
 router.use(requireLogin);
@@ -53,9 +54,15 @@ router.post('/', requireRole('receptionist', 'doctor'), (req, res) => {
     doctorId: int(req.body.doctor_id),
     serviceId: int(req.body.service_id),
     reason: str(req.body.reason),
+    bhyt: req.body.bhyt === '1',
   };
   const errors = [];
   if (!form.patientId) errors.push('Vui lòng chọn bệnh nhân.');
+  if (form.bhyt && form.patientId) {
+    const pt = db.prepare('SELECT * FROM patients WHERE id = ?').get(form.patientId);
+    const c = bhyt.coverage({ bhyt: 1, visit_date: today() }, pt);
+    if (!c.eligible) errors.push(`Không thể khám BHYT: ${c.reasons.join('; ')}.`);
+  }
   if (!form.departmentId) errors.push('Vui lòng chọn chuyên khoa.');
   if (errors.length) {
     const patient = form.patientId ? db.prepare('SELECT * FROM patients WHERE id = ?').get(form.patientId) : null;
@@ -166,7 +173,15 @@ router.post('/:id/assign', requireRole('receptionist', 'doctor'), loadVisit, han
   if (req.visit.status === 'done' || req.visit.status === 'cancelled') throw new clinical.UserError('Không thể chuyển lượt khám này.');
   const departmentId = int(req.body.department_id) || req.visit.department_id;
   const doctorId = int(req.body.doctor_id);
-  db.prepare('UPDATE visits SET department_id = ?, doctor_id = ? WHERE id = ?').run(departmentId, doctorId, req.visit.id);
+  const useBhyt = req.body.bhyt === '1' ? 1 : 0;
+  if (useBhyt && !req.visit.bhyt) {
+    const pt = db.prepare('SELECT * FROM patients WHERE id = ?').get(req.visit.patient_id);
+    const c = bhyt.coverage({ bhyt: 1, visit_date: req.visit.visit_date }, pt);
+    if (!c.eligible) throw new clinical.UserError(`Không thể chuyển sang khám BHYT: ${c.reasons.join('; ')}.`);
+  }
+  db.prepare('UPDATE visits SET department_id = ?, doctor_id = ?, bhyt = ? WHERE id = ?').run(departmentId, doctorId, useBhyt, req.visit.id);
+  // Re-price any open (unpaid) invoice with the new BHYT setting
+  if (db.prepare(`SELECT 1 FROM invoices WHERE visit_id = ? AND status = 'unpaid'`).get(req.visit.id)) clinical.syncInvoice(req.visit.id, req.user.id);
   audit(req.user.id, 'assign', 'visit', req.visit.id);
   req.flash('ok', 'Đã cập nhật phòng khám / bác sĩ.');
   back(req, res);

@@ -27,6 +27,32 @@ router.get('/', (req, res) => {
   res.render('lab', { title: 'Cận lâm sàng', items, date, category, show, categories });
 });
 
+/** Printable result sheet for the paraclinical services of one visit (optionally a single category or item). */
+router.get('/visit/:visitId/print', (req, res) => {
+  const visitId = int(req.params.visitId);
+  const v = db.prepare(`SELECT v.*, d.name AS dept_name, u.full_name AS doctor_name, u.title AS doctor_title FROM visits v
+    LEFT JOIN departments d ON d.id = v.department_id LEFT JOIN users u ON u.id = v.doctor_id WHERE v.id = ?`).get(visitId);
+  if (!v) return res.status(404).render('error', { title: 'Không tìm thấy', message: 'Không tìm thấy lượt khám.' });
+  const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(v.patient_id);
+  const where = [`vs.visit_id = ?`, `s.category != 'Khám'`];
+  const params = [visitId];
+  const category = str(req.query.category);
+  const itemId = int(req.query.item);
+  if (category) { where.push('s.category = ?'); params.push(category); }
+  if (itemId) { where.push('vs.id = ?'); params.push(itemId); }
+  const items = db.prepare(`SELECT vs.*, s.name, s.category, s.code, o.full_name AS ordered_by_name, o.title AS ordered_by_title,
+      r.full_name AS result_by_name, r.title AS result_by_title
+    FROM visit_services vs JOIN services s ON s.id = vs.service_id
+    LEFT JOIN users o ON o.id = vs.ordered_by LEFT JOIN users r ON r.id = vs.result_by
+    WHERE ${where.join(' AND ')} ORDER BY s.category, vs.id`).all(...params);
+  const groups = {};
+  for (const it of items) (groups[it.category] ||= []).push(it);
+  const technicians = [...new Set(items.filter((i) => i.result_by_name).map((i) => `${i.result_by_title ? i.result_by_title + ' ' : ''}${i.result_by_name}`))];
+  const orderers = [...new Set(items.filter((i) => i.ordered_by_name).map((i) => `${i.ordered_by_title ? i.ordered_by_title + ' ' : ''}${i.ordered_by_name}`))];
+  const lastResult = items.reduce((m, i) => (i.result_at && i.result_at > m ? i.result_at : m), '');
+  res.render('lab-print', { title: 'Phiếu kết quả cận lâm sàng', v, patient, groups, items, technicians, orderers, lastResult });
+});
+
 router.post('/:id/result', requireRole('technician', 'doctor'), (req, res) => {
   const id = int(req.params.id);
   const r = db.prepare('UPDATE visit_services SET result = ?, result_at = ?, result_by = ? WHERE id = ?')

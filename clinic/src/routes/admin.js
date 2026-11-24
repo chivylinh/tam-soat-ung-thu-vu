@@ -20,6 +20,7 @@ function readUser(body, isNew) {
   const u = {
     username: (str(body.username) || '').toLowerCase(), full_name: str(body.full_name), role: body.role,
     department_id: int(body.department_id), title: str(body.title), active: body.active === '0' ? 0 : 1,
+    license_no: str(body.license_no),
   };
   const errors = [];
   if (!/^[a-z0-9._-]{3,32}$/.test(u.username)) errors.push('Tên đăng nhập 3–32 ký tự: chữ thường, số, dấu . _ -');
@@ -38,8 +39,8 @@ router.post('/users', (req, res) => {
   const { u, pw, errors } = readUser(req.body, true);
   if (db.prepare('SELECT 1 FROM users WHERE username = ?').get(u.username)) errors.push('Tên đăng nhập đã tồn tại.');
   if (errors.length) return res.status(400).render('admin/user-form', { title: 'Thêm nhân viên', u, errors, action: '/admin/users', departments: departments() });
-  const r = db.prepare(`INSERT INTO users (username, password_hash, full_name, role, department_id, title, active) VALUES (?,?,?,?,?,?,?)`)
-    .run(u.username, hashPassword(pw), u.full_name, u.role, u.department_id, u.title, u.active);
+  const r = db.prepare(`INSERT INTO users (username, password_hash, full_name, role, department_id, title, active, license_no) VALUES (?,?,?,?,?,?,?,?)`)
+    .run(u.username, hashPassword(pw), u.full_name, u.role, u.department_id, u.title, u.active, u.license_no);
   audit(req.user.id, 'create', 'user', Number(r.lastInsertRowid));
   req.flash('ok', 'Đã thêm nhân viên.');
   res.redirect('/admin/users');
@@ -59,8 +60,8 @@ router.post('/users/:id', (req, res) => {
   if (db.prepare('SELECT 1 FROM users WHERE username = ? AND id != ?').get(u.username, id)) errors.push('Tên đăng nhập đã tồn tại.');
   if (id === req.user.id && (u.role !== 'admin' || !u.active)) errors.push('Không thể tự bỏ quyền quản trị hoặc khóa tài khoản của chính mình.');
   if (errors.length) return res.status(400).render('admin/user-form', { title: 'Sửa nhân viên', u: { ...u, id }, errors, action: `/admin/users/${id}`, departments: departments() });
-  db.prepare(`UPDATE users SET username = ?, full_name = ?, role = ?, department_id = ?, title = ?, active = ? WHERE id = ?`)
-    .run(u.username, u.full_name, u.role, u.department_id, u.title, u.active, id);
+  db.prepare(`UPDATE users SET username = ?, full_name = ?, role = ?, department_id = ?, title = ?, active = ?, license_no = ? WHERE id = ?`)
+    .run(u.username, u.full_name, u.role, u.department_id, u.title, u.active, u.license_no, id);
   if (pw) db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(pw), id);
   if (!u.active || pw) db.prepare(`DELETE FROM sessions WHERE json_extract(data, '$.userId') = ?`).run(id);
   audit(req.user.id, 'update', 'user', id, pw ? 'password reset' : null);
@@ -81,9 +82,9 @@ router.post('/departments', (req, res) => {
   if (!name) { req.flash('error', 'Vui lòng nhập tên chuyên khoa.'); return res.redirect('/admin/departments'); }
   const dup = db.prepare('SELECT 1 FROM departments WHERE name = ? AND id != ?').get(name, id || 0);
   if (dup) { req.flash('error', 'Tên chuyên khoa đã tồn tại.'); return res.redirect('/admin/departments'); }
-  const vals = [name, str(req.body.room), int(req.body.default_service_id), req.body.active === '0' ? 0 : 1];
-  if (id) db.prepare('UPDATE departments SET name = ?, room = ?, default_service_id = ?, active = ? WHERE id = ?').run(...vals, id);
-  else db.prepare('INSERT INTO departments (name, room, default_service_id, active) VALUES (?,?,?,?)').run(...vals);
+  const vals = [name, str(req.body.room), int(req.body.default_service_id), req.body.active === '0' ? 0 : 1, str(req.body.bhyt_code)];
+  if (id) db.prepare('UPDATE departments SET name = ?, room = ?, default_service_id = ?, active = ?, bhyt_code = ? WHERE id = ?').run(...vals, id);
+  else db.prepare('INSERT INTO departments (name, room, default_service_id, active, bhyt_code) VALUES (?,?,?,?,?)').run(...vals);
   audit(req.user.id, id ? 'update' : 'create', 'department', id || null, name);
   req.flash('ok', 'Đã lưu chuyên khoa.');
   res.redirect('/admin/departments');
@@ -100,14 +101,14 @@ router.post('/services', (req, res) => {
   const id = int(req.body.id);
   const s = {
     code: str(req.body.code), name: str(req.body.name), category: str(req.body.category) || 'Khác',
-    price: int(req.body.price), active: req.body.active === '0' ? 0 : 1,
+    price: int(req.body.price), active: req.body.active === '0' ? 0 : 1, bhyt_code: str(req.body.bhyt_code),
   };
   if (!s.name || s.price === null || s.price < 0) { req.flash('error', 'Vui lòng nhập tên và giá hợp lệ.'); return res.redirect('/admin/services'); }
   if (s.code && db.prepare('SELECT 1 FROM services WHERE code = ? AND id != ?').get(s.code, id || 0)) {
     req.flash('error', 'Mã dịch vụ đã tồn tại.'); return res.redirect('/admin/services');
   }
-  if (id) db.prepare('UPDATE services SET code = ?, name = ?, category = ?, price = ?, active = ? WHERE id = ?').run(s.code, s.name, s.category, s.price, s.active, id);
-  else db.prepare('INSERT INTO services (code, name, category, price, active) VALUES (?,?,?,?,?)').run(s.code, s.name, s.category, s.price, s.active);
+  if (id) db.prepare('UPDATE services SET code = ?, name = ?, category = ?, price = ?, active = ?, bhyt_code = ? WHERE id = ?').run(s.code, s.name, s.category, s.price, s.active, s.bhyt_code, id);
+  else db.prepare('INSERT INTO services (code, name, category, price, active, bhyt_code) VALUES (?,?,?,?,?,?)').run(s.code, s.name, s.category, s.price, s.active, s.bhyt_code);
   audit(req.user.id, id ? 'update' : 'create', 'service', id || null, s.name);
   req.flash('ok', 'Đã lưu dịch vụ.');
   res.redirect('/admin/services');

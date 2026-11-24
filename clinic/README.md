@@ -14,6 +14,9 @@
 | Kê đơn | Kê thuốc từ danh mục kho, mẫu cách dùng nhanh, cảnh báo tồn kho; in đơn thuốc / phiếu khám |
 | Thu ngân | Lập hóa đơn từ lượt khám, giảm giá, tiền mặt / chuyển khoản / thẻ, in phiếu thu. Có thể thu tiền khám trước, các chỉ định sau sẽ vào hóa đơn mới. Hủy hóa đơn (quản trị) sẽ hoàn kho |
 | Kho thuốc | Danh mục thuốc, nhập / xuất điều chỉnh, lịch sử kho, cảnh báo sắp hết và sắp hết hạn; thuốc tự trừ kho khi thu tiền |
+| BHYT | Thẻ BHYT trong hồ sơ (số thẻ, hạn, nơi ĐKBĐ, mức hưởng); khám BHYT khi tiếp nhận (kiểm tra hạn thẻ); hóa đơn tách **BHYT chi trả / người bệnh trả** theo mức hưởng, áp dụng mức 100% khi chi phí dưới 15% lương cơ sở; **xuất XML giám định** (XML1 tổng hợp, XML2 thuốc, XML3 DVKT, gói GIAMDINHHS) kèm kiểm tra lỗi từng hồ sơ — *bản thử nghiệm, xem lưu ý bên dưới* |
+| Nhắc lịch | Danh sách lịch hẹn và hẹn tái khám theo ngày, tin nhắn soạn sẵn (sửa mẫu trong `config.env`), nút sao chép / mở Zalo / gọi, đánh dấu đã nhắc, xuất CSV cho dịch vụ gửi SMS/Zalo hàng loạt |
+| Phiếu kết quả CLS | In phiếu kết quả xét nghiệm / chẩn đoán hình ảnh theo lượt khám (hoặc từng chỉ định), nhóm theo loại, có chữ ký bác sĩ chỉ định và người trả kết quả |
 | Báo cáo | Doanh thu theo ngày, dịch vụ / thuốc, lượt khám theo khoa và bác sĩ, chẩn đoán thường gặp, xuất CSV (mở bằng Excel) |
 | Quản trị | Nhân viên & phân quyền, chuyên khoa / phòng, danh mục dịch vụ & bảng giá, nhật ký hoạt động |
 
@@ -73,13 +76,19 @@ Chạy kiểm thử: `npm test` · Sao lưu thủ công: `npm run backup`
 | `COOKIE_SECURE` | `1` khi chạy sau HTTPS | tắt |
 | `TRUST_PROXY` | `1` khi chạy sau Nginx / reverse proxy | tắt |
 | `TZ` | Múi giờ | `Asia/Ho_Chi_Minh` |
+| `CLINIC_PHONE` | Số điện thoại phòng khám trong tin nhắn nhắc lịch | trống |
+| `REMINDER_APPOINTMENT`, `REMINDER_FOLLOWUP` | Mẫu tin nhắn nhắc lịch hẹn / tái khám (từ khóa `{ten} {phongkham} {khoa} {gio} {ngay} {sdt}`) | có sẵn |
+| `BHYT_MA_CSKCB` | Mã cơ sở KCB do BHXH cấp — bắt buộc để xuất XML | trống |
+| `LUONG_CO_SO` | Lương cơ sở (đồng), dùng cho ngưỡng 15% BHYT trả 100% | `2340000` |
 
 ## Đưa vào sử dụng thật — lưu ý
 
 - **Sao lưu ra ngoài máy:** bản sao lưu tự động nằm cùng ổ đĩa với dữ liệu. Nên đặt `BACKUP_DIR` sang ổ khác hoặc thư mục đồng bộ đám mây, phòng khi hỏng máy.
 - Chạy sau **HTTPS** (Nginx + Let's Encrypt) nếu truy cập qua Internet; đặt `COOKIE_SECURE=1`, `TRUST_PROXY=1`.
 - Dữ liệu sức khỏe là dữ liệu cá nhân nhạy cảm theo **Nghị định 13/2023/NĐ-CP**: phân quyền đúng người, khóa tài khoản nhân viên nghỉ việc, xem nhật ký hoạt động định kỳ.
-- Chưa có: kết nối cổng giám định BHYT (xuất XML theo QĐ 4750/130), kết nối máy xét nghiệm (LIS/HL7), lưu ảnh DICOM (PACS), hóa đơn điện tử, chữ ký số bệnh án điện tử theo Thông tư 46/2018 & 13/2025/TT-BYT. Các phần này cần làm thêm tùy nhu cầu.
+- **XML BHYT là bản thử nghiệm.** Tên trường và cấu trúc viết theo QĐ 130/QĐ-BYT và QĐ 4750/QĐ-BYT nhưng **chưa được đối chiếu với phụ lục chính thức**, chưa có chữ ký số và chưa có XML4/XML5. Mức hưởng suy từ ký tự thứ 3 của mã thẻ 15 ký tự (hoặc chọn tay), chưa xét đúng/trái tuyến, trần thanh toán, tỷ lệ thanh toán riêng của từng thuốc/DVKT. Trước khi quyết toán thật: nhập mã danh mục BHYT chính xác cho dịch vụ, thuốc, khoa, chứng chỉ hành nghề bác sĩ; nộp thử trên cổng kiểm thử của BHXH. Mọi quy tắc nằm trong `src/bhyt.js` để dễ chỉnh.
+- Hóa đơn tính phần BHYT tại thời điểm lập. Nếu sau khi đã thu tiền khám, tổng chi phí lượt khám vượt ngưỡng 15% lương cơ sở, phần đã thu không tự điều chỉnh lại (file XML tính theo tổng cuối cùng).
+- Chưa có: kết nối trực tiếp cổng giám định BHYT, kết nối máy xét nghiệm (LIS/HL7), lưu ảnh DICOM (PACS), hóa đơn điện tử, chữ ký số bệnh án điện tử theo Thông tư 46/2018 & 13/2025/TT-BYT. Các phần này cần làm thêm tùy nhu cầu.
 
 ## Cấu trúc mã nguồn
 

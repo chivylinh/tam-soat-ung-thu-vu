@@ -14,10 +14,21 @@
       <div class="field"><label>Ngày sinh</label><input type="date" name="dob" value="<%= p.dob || '' %>" max="<%= today() %>"></div>
       <div class="field"><label>Số điện thoại</label><input name="phone" value="<%= p.phone || '' %>" inputmode="tel"></div>
       <div class="field"><label>Số CCCD</label><input name="id_number" value="<%= p.id_number || '' %>"></div>
-      <div class="field"><label>Số thẻ BHYT</label><input name="insurance_number" value="<%= p.insurance_number || '' %>"></div>
+      <div class="field"><label>Số thẻ BHYT</label><input name="insurance_number" value="<%= p.insurance_number || '' %>" placeholder="15 ký tự, VD: DN4010123456789"></div>
       <div class="field"><label>Nghề nghiệp</label><input name="occupation" value="<%= p.occupation || '' %>"></div>
       <div class="field"><label>Người liên hệ khi cần</label><input name="emergency_contact" value="<%= p.emergency_contact || '' %>" placeholder="Tên – quan hệ – SĐT"></div>
       <div class="field wide"><label>Địa chỉ</label><input name="address" value="<%= p.address || '' %>"></div>
+    </div>
+    <h3>Bảo hiểm y tế</h3>
+    <div class="form-grid">
+      <div class="field"><label>Thẻ có giá trị từ</label><input type="date" name="insurance_valid_from" value="<%= p.insurance_valid_from || '' %>"></div>
+      <div class="field"><label>Đến</label><input type="date" name="insurance_valid_to" value="<%= p.insurance_valid_to || '' %>"></div>
+      <div class="field"><label>Mã nơi ĐK KCB ban đầu</label><input name="insurance_reg_place" value="<%= p.insurance_reg_place || '' %>" placeholder="VD: 01001"></div>
+      <div class="field"><label>Mức hưởng</label>
+        <select name="insurance_benefit"><option value="">Tự xác định theo mã thẻ</option>
+          <% [100, 95, 80].forEach(r => { %><option value="<%= r %>" <%= Number(p.insurance_benefit) === r ? 'selected' : '' %>><%= r %>%</option><% }) %>
+        </select>
+      </div>
     </div>
     <h3>Thông tin y tế</h3>
     <div class="form-grid">

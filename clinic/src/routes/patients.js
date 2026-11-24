@@ -8,7 +8,8 @@ const router = express.Router();
 router.use(requireLogin);
 
 const FIELDS = ['full_name', 'gender', 'dob', 'phone', 'id_number', 'insurance_number', 'address',
-  'occupation', 'allergies', 'medical_history', 'emergency_contact'];
+  'occupation', 'allergies', 'medical_history', 'emergency_contact',
+  'insurance_valid_from', 'insurance_valid_to', 'insurance_reg_place', 'insurance_benefit'];
 
 function readPatient(body) {
   const p = {};
@@ -19,6 +20,14 @@ function readPatient(body) {
   if (p.dob && !isDate(p.dob)) errors.push('Ngày sinh không hợp lệ.');
   if (p.dob && p.dob > today()) errors.push('Ngày sinh không được ở tương lai.');
   if (p.phone && !/^[0-9+\-\s().]{8,15}$/.test(p.phone)) errors.push('Số điện thoại không hợp lệ.');
+  if (p.insurance_number) {
+    p.insurance_number = p.insurance_number.replace(/\s+/g, '').toUpperCase();
+    if (!/^[A-Z0-9]{10,15}$/.test(p.insurance_number)) errors.push('Số thẻ BHYT không hợp lệ (10–15 ký tự chữ và số).');
+  }
+  for (const f of ['insurance_valid_from', 'insurance_valid_to']) if (p[f] && !isDate(p[f])) errors.push('Hạn thẻ BHYT không hợp lệ.');
+  if (p.insurance_valid_from && p.insurance_valid_to && p.insurance_valid_from > p.insurance_valid_to) errors.push('Hạn thẻ BHYT: ngày bắt đầu sau ngày kết thúc.');
+  p.insurance_benefit = p.insurance_benefit ? Number(p.insurance_benefit) : null;
+  if (p.insurance_benefit !== null && ![80, 95, 100].includes(p.insurance_benefit)) errors.push('Mức hưởng BHYT phải là 80, 95 hoặc 100%.');
   return { p, errors };
 }
 

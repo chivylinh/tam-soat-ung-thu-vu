@@ -13,6 +13,10 @@
       <div class="field"><label>Tồn tối thiểu (cảnh báo)</label><input name="min_stock" type="number" min="0" value="<%= m.min_stock ?? 0 %>"></div>
       <div class="field"><label>Hạn dùng</label><input name="expiry_date" type="date" value="<%= m.expiry_date || '' %>"></div>
       <% if (!m.id) { %><div class="field"><label>Tồn đầu kỳ</label><input name="stock" type="number" min="0" value="<%= m.stock || 0 %>"></div><% } %>
+      <div class="field"><label>Hàm lượng</label><input name="strength" value="<%= m.strength || '' %>" placeholder="500mg"></div>
+      <div class="field"><label>Đường dùng</label><input name="route" value="<%= m.route || '' %>" placeholder="Uống"></div>
+      <div class="field"><label>Số đăng ký</label><input name="reg_no" value="<%= m.reg_no || '' %>"></div>
+      <div class="field"><label>Mã thuốc BHYT (để trống nếu không thanh toán BHYT)</label><input name="bhyt_code" value="<%= m.bhyt_code || '' %>"></div>
       <div class="field"><label>Trạng thái</label><select name="active"><option value="1" <%= m.active ? 'selected' : '' %>>Đang dùng</option><option value="0" <%= m.active ? '' : 'selected' %>>Ngừng dùng</option></select></div>
     </div>
     <div class="actions"><button class="btn primary">Lưu</button><a class="btn" href="/pharmacy">Hủy</a></div>

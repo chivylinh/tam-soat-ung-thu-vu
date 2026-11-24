@@ -195,6 +195,30 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 `);
 
+/** Add a column to an existing table if it is missing (simple forward-only migrations). */
+function ensureColumn(table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+  if (!cols.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+// v1.1 — BHYT, reminders, CLS result sheets
+ensureColumn('patients', 'insurance_valid_from', 'TEXT');
+ensureColumn('patients', 'insurance_valid_to', 'TEXT');
+ensureColumn('patients', 'insurance_reg_place', 'TEXT');      // mã nơi đăng ký KCB ban đầu (MA_DKBD)
+ensureColumn('patients', 'insurance_benefit', 'INTEGER');     // mức hưởng % (80/95/100)
+ensureColumn('departments', 'bhyt_code', 'TEXT');             // MA_KHOA
+ensureColumn('users', 'license_no', 'TEXT');                  // số chứng chỉ hành nghề (MA_BAC_SI)
+ensureColumn('services', 'bhyt_code', 'TEXT');                // mã DVKT theo danh mục BHYT
+ensureColumn('medicines', 'bhyt_code', 'TEXT');               // mã thuốc theo danh mục BHYT
+ensureColumn('medicines', 'strength', 'TEXT');                // hàm lượng
+ensureColumn('medicines', 'route', 'TEXT');                   // đường dùng
+ensureColumn('medicines', 'reg_no', 'TEXT');                  // số đăng ký
+ensureColumn('visits', 'bhyt', 'INTEGER NOT NULL DEFAULT 0'); // khám BHYT
+ensureColumn('visits', 'follow_up_reminded_at', 'TEXT');
+ensureColumn('appointments', 'reminded_at', 'TEXT');
+ensureColumn('invoices', 'insurance_amount', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('invoice_items', 'bhyt_covered', 'INTEGER NOT NULL DEFAULT 0');
+
 /** Run fn inside a transaction; rolls back on error. */
 function tx(fn) {
   db.exec('BEGIN IMMEDIATE');

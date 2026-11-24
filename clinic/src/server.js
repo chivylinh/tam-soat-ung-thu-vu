@@ -72,6 +72,7 @@ function createApp() {
       user: req.user,
       csrf: req.session.csrf,
       ROLES,
+      benefitFromCard: require('./bhyt').benefitFromCard,
       can: (...roles) => hasRole(req.user, ...roles),
       path: req.path,
       query: req.query,
@@ -110,6 +111,8 @@ function createApp() {
   app.use('/invoices', require('./routes/invoices'));
   app.use('/pharmacy', require('./routes/pharmacy'));
   app.use('/reports', require('./routes/reports'));
+  app.use('/bhyt', require('./routes/bhyt'));
+  app.use('/reminders', require('./routes/reminders'));
   app.use('/admin', require('./routes/admin'));
 
   app.use((req, res) => {

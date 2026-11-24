@@ -12,7 +12,8 @@
   const maxDay = Math.max(1, ...revenueByDay.map(r => r.total));
 %>
 <div class="kpis">
-  <div class="kpi"><div class="label">Doanh thu thực thu</div><div class="value money"><%= money(revenueTotal) %></div><div class="sub">Đã trừ giảm giá <%= money(discounts) %></div></div>
+  <div class="kpi"><div class="label">Người bệnh đã trả</div><div class="value money"><%= money(revenueTotal) %></div><div class="sub">Đã trừ giảm giá <%= money(discounts) %></div></div>
+  <div class="kpi"><div class="label">BHYT phải thu</div><div class="value money"><%= money(insurance.s) %></div><div class="sub"><%= insurance.n %> hóa đơn có BHYT</div></div>
   <div class="kpi"><div class="label">Dịch vụ</div><div class="value money"><%= money(byType.service || 0) %></div></div>
   <div class="kpi"><div class="label">Thuốc</div><div class="value money"><%= money(byType.medicine || 0) %></div></div>
   <div class="kpi"><div class="label">Lượt khám</div><div class="value"><%= visitTotal %></div></div>

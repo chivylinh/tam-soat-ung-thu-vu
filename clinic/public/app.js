@@ -27,3 +27,23 @@ if (dosageHelper) {
     if (target && dosageHelper.value) target.value = dosageHelper.value;
   });
 }
+
+// Copy text of an element: <button data-copy="#selector">
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-copy]');
+  if (!btn) return;
+  const el = document.querySelector(btn.getAttribute('data-copy'));
+  if (!el) return;
+  const text = el.textContent.trim();
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch { /* ignore */ }
+    ta.remove();
+  }
+  const old = btn.textContent;
+  btn.textContent = 'Đã chép ✓';
+  setTimeout(() => { btn.textContent = old; }, 1500);
+});

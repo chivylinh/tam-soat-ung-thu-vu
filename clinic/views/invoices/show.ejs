@@ -15,13 +15,14 @@
       <thead><tr><th>Nội dung</th><th>Loại</th><th class="num">SL</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th></tr></thead>
       <tbody>
       <% items.forEach(it => { %>
-        <tr><td><%= it.description %></td><td><%= it.item_type === 'service' ? 'Dịch vụ' : 'Thuốc' %></td><td class="num"><%= it.quantity %></td><td class="num"><%= money(it.unit_price) %></td><td class="num"><%= money(it.amount) %></td></tr>
+        <tr><td><%= it.description %><%- it.bhyt_covered ? ' <span class="badge info">BHYT</span>' : '' %></td><td><%= it.item_type === 'service' ? 'Dịch vụ' : 'Thuốc' %></td><td class="num"><%= it.quantity %></td><td class="num"><%= money(it.unit_price) %></td><td class="num"><%= money(it.amount) %></td></tr>
       <% }) %>
       </tbody>
       <tfoot>
         <tr><td colspan="4" class="right">Tạm tính</td><td class="num"><%= money(inv.subtotal) %></td></tr>
+        <% if (inv.insurance_amount) { %><tr><td colspan="4" class="right">BHYT chi trả</td><td class="num">−<%= money(inv.insurance_amount) %></td></tr><% } %>
         <% if (inv.discount) { %><tr><td colspan="4" class="right">Giảm giá</td><td class="num">−<%= money(inv.discount) %></td></tr><% } %>
-        <tr><td colspan="4" class="right">Thành tiền</td><td class="num"><%= money(inv.total) %></td></tr>
+        <tr><td colspan="4" class="right">Người bệnh trả</td><td class="num"><%= money(inv.total) %></td></tr>
       </tfoot>
     </table></div>
     <% } else { %><div class="empty">Hóa đơn chưa có khoản nào.</div><% } %>
@@ -36,7 +37,7 @@
         <div class="field"><label>Hình thức thanh toán</label>
           <select name="payment_method"><% Object.entries(PAYMENT_METHODS).forEach(([k, v]) => { %><option value="<%= k %>"><%= v %></option><% }) %></select>
         </div>
-        <div class="field"><label>Giảm giá (₫)</label><input name="discount" type="number" min="0" max="<%= inv.subtotal %>" step="1000" value="0"></div>
+        <div class="field"><label>Giảm giá (₫)</label><input name="discount" type="number" min="0" max="<%= inv.subtotal - inv.insurance_amount %>" step="1000" value="0"></div>
         <div class="field"><label>Ghi chú</label><input name="note"></div>
         <button class="btn primary" style="width:100%;justify-content:center" <%= items.length ? '' : 'disabled' %>>Thu <%= money(inv.total) %></button>
       </form>

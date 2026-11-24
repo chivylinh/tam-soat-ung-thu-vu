@@ -13,7 +13,7 @@
     <tbody>
     <% items.forEach(it => { %>
       <tr>
-        <td><a href="/visits/<%= it.visit_id %>"><strong><%= it.full_name %></strong></a><div class="small muted"><%= it.code %> · <%= GENDERS[it.gender] || '' %> <%= age(it.dob) %></div></td>
+        <td><a href="/visits/<%= it.visit_id %>"><strong><%= it.full_name %></strong></a><% if (it.result) { %> <a class="small" href="/lab/visit/<%= it.visit_id %>/print?item=<%= it.id %>" target="_blank">In phiếu</a><% } %><div class="small muted"><%= it.code %> · <%= GENDERS[it.gender] || '' %> <%= age(it.dob) %></div></td>
         <td><strong><%= it.service_name %></strong><div class="small muted"><%= it.category %></div></td>
         <td><%= it.dept_name || '' %><div class="small muted"><%= it.ordered_by_name || '' %> · <%= fmtTime(it.created_at) %></div></td>
         <td><%- it.paid ? '<span class="badge ok">Đã thu</span>' : '<span class="badge warn">Chưa thu</span>' %></td>

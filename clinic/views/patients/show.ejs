@@ -70,7 +70,7 @@
     <dl class="kv">
       <dt>Mã bệnh nhân</dt><dd><%= p.code %></dd>
       <dt>CCCD</dt><dd><%= p.id_number || '—' %></dd>
-      <dt>Số thẻ BHYT</dt><dd><%= p.insurance_number || '—' %></dd>
+      <dt>Số thẻ BHYT</dt><dd><%= p.insurance_number || '—' %><% if (p.insurance_number) { %><div class="small muted">Hạn: <%= fmtDate(p.insurance_valid_from) || '?' %> – <%= fmtDate(p.insurance_valid_to) || '?' %> · ĐKBĐ: <%= p.insurance_reg_place || '—' %> · Mức hưởng: <%= p.insurance_benefit || benefitFromCard(p.insurance_number) || '?' %>%</div><% } %></dd>
       <dt>Nghề nghiệp</dt><dd><%= p.occupation || '—' %></dd>
       <dt>Địa chỉ</dt><dd><%= p.address || '—' %></dd>
       <dt>Người liên hệ</dt><dd><%= p.emergency_contact || '—' %></dd>

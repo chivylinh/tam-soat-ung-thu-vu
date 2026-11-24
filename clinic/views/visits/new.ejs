@@ -32,6 +32,12 @@
           <% examServices.forEach(s => { %><option value="<%= s.id %>" <%= form.serviceId === s.id ? 'selected' : '' %>><%= s.name %> — <%= money(s.price) %></option><% }) %>
         </select>
       </div>
+      <div class="field wide">
+        <label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--text)">
+          <input type="checkbox" name="bhyt" value="1" style="width:auto" <%= (form.bhyt || (form.bhyt === undefined && patient.insurance_number)) ? 'checked' : '' %>>
+          Khám BHYT<% if (patient.insurance_number) { %> — thẻ <%= patient.insurance_number %>, hạn đến <%= fmtDate(patient.insurance_valid_to) || '(chưa nhập)' %><% } else { %> (bệnh nhân chưa có thẻ)<% } %>
+        </label>
+      </div>
       <div class="field wide"><label>Lý do khám</label><input name="reason" value="<%= form.reason || '' %>" placeholder="Triệu chứng chính, yêu cầu khám…"></div>
     </div>
     <button class="btn primary" type="submit">Tiếp nhận &amp; cấp số</button>

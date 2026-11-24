@@ -18,6 +18,8 @@ router.get('/', (req, res) => {
   const revenueByType = db.prepare(`SELECT ii.item_type, SUM(ii.amount) AS total FROM invoice_items ii
     JOIN invoices i ON i.id = ii.invoice_id WHERE i.status = 'paid' AND substr(i.paid_at,1,10) BETWEEN ? AND ?
     GROUP BY ii.item_type`).all(from, to);
+  const insurance = db.prepare(`SELECT COALESCE(SUM(insurance_amount),0) AS s, COUNT(*) AS n FROM invoices
+    WHERE status = 'paid' AND insurance_amount > 0 AND substr(paid_at,1,10) BETWEEN ? AND ?`).get(from, to);
   const discounts = db.prepare(`SELECT COALESCE(SUM(discount),0) AS s FROM invoices
     WHERE status = 'paid' AND substr(paid_at,1,10) BETWEEN ? AND ?`).get(from, to).s;
 
@@ -44,7 +46,7 @@ router.get('/', (req, res) => {
   const newPatients = db.prepare(`SELECT COUNT(*) AS n FROM patients WHERE substr(created_at,1,10) BETWEEN ? AND ?`).get(from, to).n;
 
   res.render('reports', {
-    title: 'Báo cáo thống kê', from, to, revenueByDay, revenueTotal, revenueByType, discounts,
+    title: 'Báo cáo thống kê', from, to, revenueByDay, revenueTotal, revenueByType, discounts, insurance,
     visitsByDept, visitTotal, byDoctor, topDiagnoses, topServices, topMedicines, newPatients,
   });
 });

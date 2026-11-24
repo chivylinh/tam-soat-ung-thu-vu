@@ -11,6 +11,7 @@
     <div class="muted"><%= patient.code %> · <%= GENDERS[patient.gender] || '' %> · <%= age(patient.dob) %> · <%= patient.phone || '' %><%= patient.insurance_number ? ' · BHYT ' + patient.insurance_number : '' %></div>
   </div>
   <div class="actions">
+    <% if (v.bhyt) { %><span class="badge info">BHYT</span><% } %>
     <%- include('../partials/badge', { map: VISIT_STATUS, status: v.status }) %>
     <% if (v.status === 'waiting' && isDoctor) { %>
       <form method="post" action="/visits/<%= v.id %>/start" class="inline"><%- include('../partials/csrf') %><button class="btn primary">Bắt đầu khám</button></form>
@@ -19,6 +20,7 @@
       <form method="post" action="/visits/<%= v.id %>/reopen" class="inline"><%- include('../partials/csrf') %><button class="btn">Mở lại</button></form>
     <% } %>
     <a class="btn" href="/visits/<%= v.id %>/print" target="_blank">In phiếu khám / đơn thuốc</a>
+    <% if (services.some(s => s.category !== 'Khám')) { %><a class="btn" href="/lab/visit/<%= v.id %>/print" target="_blank">In phiếu kết quả CLS</a><% } %>
     <% if (can('cashier','receptionist') && editable) { %>
       <form method="post" action="/invoices/from-visit/<%= v.id %>" class="inline"><%- include('../partials/csrf') %><button class="btn">Thu ngân</button></form>
     <% } %>
@@ -176,6 +178,7 @@
         <div class="field"><label>Bác sĩ</label>
           <select name="doctor_id"><option value="">—</option><% doctors.forEach(d => { %><option value="<%= d.id %>" <%= v.doctor_id === d.id ? 'selected' : '' %>><%= d.full_name %></option><% }) %></select>
         </div>
+        <div class="field"><label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--text)"><input type="checkbox" name="bhyt" value="1" style="width:auto" <%= v.bhyt ? 'checked' : '' %>> Khám BHYT</label></div>
         <button class="btn small">Cập nhật</button>
         </fieldset>
       </form>
