@@ -1,0 +1,36 @@
+<%- include('partials/header') %>
+<div class="page-head"><div><div class="eyebrow">Xét nghiệm · Chẩn đoán hình ảnh · Thăm dò chức năng</div><h1>Cận lâm sàng</h1><div class="muted">Ngày <%= fmtDate(date) %> · <%= items.length %> chỉ định<%= show === 'pending' ? ' chờ kết quả' : '' %></div></div></div>
+<div class="card">
+  <form class="filters" method="get" action="/lab">
+    <input type="date" name="date" value="<%= date %>">
+    <select name="category"><option value="">Tất cả loại</option><% categories.forEach(c => { %><option <%= category === c ? 'selected' : '' %>><%= c %></option><% }) %></select>
+    <select name="show"><option value="pending">Chờ kết quả</option><option value="all" <%= show === 'all' ? 'selected' : '' %>>Tất cả</option></select>
+    <button class="btn">Lọc</button>
+  </form>
+  <% if (items.length) { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Bệnh nhân</th><th>Dịch vụ</th><th>Chỉ định</th><th>Thu phí</th><th style="min-width:280px">Kết quả</th></tr></thead>
+    <tbody>
+    <% items.forEach(it => { %>
+      <tr>
+        <td><a href="/visits/<%= it.visit_id %>"><strong><%= it.full_name %></strong></a><% if (it.result) { %> <a class="small" href="/lab/visit/<%= it.visit_id %>/print?item=<%= it.id %>" target="_blank">In phiếu</a><% } %><div class="small muted"><%= it.code %> · <%= GENDERS[it.gender] || '' %> <%= age(it.dob) %></div></td>
+        <td><strong><%= it.service_name %></strong><div class="small muted"><%= it.category %></div></td>
+        <td><%= it.dept_name || '' %><div class="small muted"><%= it.ordered_by_name || '' %> · <%= fmtTime(it.created_at) %></div></td>
+        <td><%- it.paid ? '<span class="badge ok">Đã thu</span>' : '<span class="badge warn">Chưa thu</span>' %></td>
+        <td>
+          <% if (can('technician','doctor')) { %>
+          <form method="post" action="/lab/<%= it.id %>/result" class="inline-form">
+            <%- include('partials/csrf') %>
+            <input type="hidden" name="date" value="<%= date %>"><input type="hidden" name="category" value="<%= category || '' %>"><input type="hidden" name="show" value="<%= show %>">
+            <textarea name="result" rows="2" style="flex:1;min-height:40px" placeholder="Nhập kết quả…"><%= it.result || '' %></textarea>
+            <button class="btn small primary">Lưu</button>
+          </form>
+          <% } else { %><span style="white-space:pre-line"><%= it.result || '(chưa có)' %></span><% } %>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% } else { %><div class="empty">Không có chỉ định nào.</div><% } %>
+</div>
+<%- include('partials/footer') %>

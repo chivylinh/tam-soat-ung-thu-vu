@@ -1,0 +1,32 @@
+<%- include('../partials/header') %>
+<div class="page-head"><div><h1><%= title %></h1></div></div>
+<% if (!patient) { %>
+  <%- include('../partials/patient-picker', { pickerAction: '/appointments/new', pickerNext: 'appointment', results, q }) %>
+<% } else { %>
+<div class="card">
+  <div class="patient-banner">
+    <div><div class="name"><%= patient.full_name %></div><div class="muted"><%= patient.code %> · <%= age(patient.dob) %> · <%= patient.phone || '' %></div></div>
+    <% if (!f.id) { %><a class="btn small" href="/appointments/new">Đổi bệnh nhân</a><% } %>
+  </div>
+</div>
+<div class="card">
+  <%- include('../partials/errors', { errors }) %>
+  <form method="post" action="<%= action %>">
+    <%- include('../partials/csrf') %>
+    <input type="hidden" name="patient_id" value="<%= patient.id %>">
+    <div class="form-grid">
+      <div class="field"><label>Ngày *</label><input type="date" name="date" value="<%= f.date || '' %>" required></div>
+      <div class="field"><label>Giờ *</label><input type="time" name="time" value="<%= f.time || '' %>" step="300" required></div>
+      <div class="field"><label>Chuyên khoa *</label>
+        <select name="department_id" required><option value="">— Chọn —</option><% departments.forEach(d => { %><option value="<%= d.id %>" <%= f.department_id === d.id ? 'selected' : '' %>><%= d.name %></option><% }) %></select>
+      </div>
+      <div class="field"><label>Bác sĩ</label>
+        <select name="doctor_id"><option value="">— Không chỉ định —</option><% doctors.forEach(d => { %><option value="<%= d.id %>" <%= f.doctor_id === d.id ? 'selected' : '' %>><%= d.full_name %></option><% }) %></select>
+      </div>
+      <div class="field wide"><label>Lý do / ghi chú</label><input name="reason" value="<%= f.reason || '' %>"></div>
+    </div>
+    <div class="actions"><button class="btn primary" type="submit">Lưu lịch hẹn</button><a class="btn" href="/appointments">Hủy</a></div>
+  </form>
+</div>
+<% } %>
+<%- include('../partials/footer') %>

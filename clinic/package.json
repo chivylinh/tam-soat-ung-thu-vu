@@ -1,0 +1,22 @@
+{
+  "name": "phong-kham-da-khoa",
+  "version": "1.0.0",
+  "description": "Phần mềm quản lý phòng khám đa khoa",
+  "private": true,
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/server.js",
+    "test": "node --test test/*.test.js",
+    "demo": "node --disable-warning=ExperimentalWarning scripts/demo-data.js",
+    "backup": "node --disable-warning=ExperimentalWarning scripts/backup.js"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.22.3",
+    "express-session": "^1.19.0"
+  }
+}

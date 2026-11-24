@@ -1,0 +1,43 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><div class="eyebrow">Chăm sóc bệnh nhân</div><h1>Nhắc lịch hẹn &amp; tái khám</h1><div class="muted">Ngày <%= fmtDate(date) %> · <%= appointments.length %> lịch hẹn · <%= followUps.length %> hẹn tái khám</div></div>
+  <div class="filters" style="margin:0">
+    <a class="btn small" href="?date=<%= prev %>">←</a>
+    <form method="get" action="/reminders" style="display:inline"><input type="date" name="date" value="<%= date %>"> <button class="btn small">Xem</button></form>
+    <a class="btn small" href="?date=<%= next %>">→</a>
+    <a class="btn" href="/reminders/export.csv?date=<%= date %>">Tải CSV (chưa nhắc)</a>
+  </div>
+</div>
+<p class="muted small">Bấm <strong>Sao chép</strong> rồi dán vào Zalo/SMS, hoặc bấm <strong>Zalo</strong> để mở cuộc trò chuyện. Sau khi nhắc, bấm <strong>Đã nhắc</strong>.
+  File CSV dùng cho các dịch vụ gửi SMS / Zalo hàng loạt. Nội dung tin nhắn sửa trong <code>config.env</code> (<code>REMINDER_APPOINTMENT</code>, <code>REMINDER_FOLLOWUP</code>, <code>CLINIC_PHONE</code>).</p>
+<% const section = (title, list) => { %>
+<div class="card">
+  <h2><%= title %> (<%= list.length %>)</h2>
+  <% if (list.length) { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Bệnh nhân</th><th>Thời gian</th><th style="min-width:300px">Nội dung tin nhắn</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>
+    <% list.forEach(r => { %>
+      <tr>
+        <td><a href="/patients/<%= r.patient_id %>"><strong><%= r.full_name %></strong></a><div class="small muted"><%= r.phone || 'Chưa có SĐT' %></div></td>
+        <td class="nowrap"><%= r.kind === 'appointment' ? fmtTime(r.scheduled_at) : 'Cả ngày' %><div class="small muted"><%= r.dept_name || '' %></div></td>
+        <td><div id="msg-<%= r.kind %>-<%= r.id %>" class="small" style="white-space:pre-wrap"><%= r.message %></div></td>
+        <td><%- r.reminded ? `<span class="badge ok">Đã nhắc</span><div class="small muted">${fmtDateTime(r.reminded)}</div>` : '<span class="badge warn">Chưa nhắc</span>' %></td>
+        <td class="right nowrap">
+          <button type="button" class="btn small" data-copy="#msg-<%= r.kind %>-<%= r.id %>">Sao chép</button>
+          <% if (r.phoneNorm) { %><a class="btn small" href="https://zalo.me/<%= r.phoneNorm %>" target="_blank" rel="noopener">Zalo</a><a class="btn small" href="tel:<%= r.phoneNorm %>">Gọi</a><% } %>
+          <form method="post" action="/reminders/mark" class="inline">
+            <%- include('partials/csrf') %><input type="hidden" name="id" value="<%= r.id %>"><input type="hidden" name="kind" value="<%= r.kind %>"><input type="hidden" name="date" value="<%= date %>">
+            <% if (r.reminded) { %><input type="hidden" name="undo" value="1"><button class="btn small">Bỏ đánh dấu</button><% } else { %><button class="btn small primary">Đã nhắc</button><% } %>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% } else { %><div class="empty">Không có.</div><% } %>
+</div>
+<% } %>
+<% section('Lịch hẹn', appointments) %>
+<% section('Hẹn tái khám', followUps) %>
+<%- include('partials/footer') %>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phiếu kết quả — <%= patient.full_name %></title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body style="background:#fff">
+<div class="print-page">
+  <div class="no-print actions"><button class="btn primary" data-print>In</button><a class="btn" href="/visits/<%= v.id %>">Quay lại</a></div>
+  <div class="print-head">
+    <div><strong><%= clinicName.toUpperCase() %></strong><div class="small">Khoa/phòng chỉ định: <%= v.dept_name || '' %></div></div>
+    <div class="right small">Mã BN: <%= patient.code %><br>Số khám: <%= v.queue_number %> – <%= fmtDate(v.visit_date) %></div>
+  </div>
+  <div class="print-title">Phiếu kết quả cận lâm sàng</div>
+  <dl class="kv">
+    <dt>Họ tên</dt><dd><strong><%= patient.full_name %></strong> — <%= GENDERS[patient.gender] || '' %> — <%= age(patient.dob) %><%= patient.dob ? ` (${fmtDate(patient.dob)})` : '' %></dd>
+    <dt>Địa chỉ</dt><dd><%= patient.address || '' %></dd>
+    <% if (patient.insurance_number) { %><dt>Số thẻ BHYT</dt><dd><%= patient.insurance_number %></dd><% } %>
+    <dt>Chẩn đoán</dt><dd><%= v.diagnosis || v.reason || '' %><%= v.icd_code ? ` (${v.icd_code})` : '' %></dd>
+  </dl>
+  <% if (!items.length) { %><p class="mt">Lượt khám này chưa có chỉ định cận lâm sàng.</p><% } %>
+  <% Object.entries(groups).forEach(([cat, list]) => { %>
+  <h3 class="mt" style="text-transform:uppercase"><%= cat %></h3>
+  <table>
+    <thead><tr><th style="width:36px">#</th><th style="width:34%">Chỉ định</th><th>Kết quả</th><th style="width:120px">Thời gian</th></tr></thead>
+    <tbody>
+    <% list.forEach((it, i) => { %>
+      <tr><td><%= i + 1 %></td><td><strong><%= it.name %></strong></td>
+        <td style="white-space:pre-line"><%= it.result || '(chưa có kết quả)' %></td>
+        <td class="small"><%= fmtDateTime(it.result_at) %></td></tr>
+    <% }) %>
+    </tbody>
+  </table>
+  <% }) %>
+  <div class="sign" style="grid-template-columns:1fr 1fr">
+    <div>&nbsp;<br><strong>Bác sĩ chỉ định</strong><br><br><br><br><%= orderers.join(', ') || (v.doctor_name || '') %></div>
+    <div>Ngày <%= fmtDate(lastResult || v.visit_date) %><br><strong>Người thực hiện / trả kết quả</strong><br><br><br><br><%= technicians.join(', ') %></div>
+  </div>
+</div>
+</body></html>

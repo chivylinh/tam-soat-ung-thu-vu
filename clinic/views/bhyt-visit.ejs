@@ -1,0 +1,16 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><div class="eyebrow">XML BHYT · <%= built.maLK %></div><h1><%= data.p.full_name %></h1><div class="muted">Lượt khám <%= fmtDate(data.v.visit_date) %> · mức hưởng áp dụng <%= built.rate %>%</div></div>
+  <div class="actions">
+    <a class="btn" href="/bhyt?from=<%= data.v.visit_date %>&to=<%= data.v.visit_date %>">← Danh sách</a>
+    <% if (!check.errors.length) { %>
+    <form method="post" action="/bhyt/export" class="inline"><%- include('partials/csrf') %><input type="hidden" name="visit_id" value="<%= data.v.id %>"><input type="hidden" name="from" value="<%= data.v.visit_date %>"><input type="hidden" name="to" value="<%= data.v.visit_date %>"><button class="btn primary">Tải file XML</button></form>
+    <% } %>
+  </div>
+</div>
+<% if (check.errors.length) { %><div class="errors"><ul><% check.errors.forEach(e => { %><li><%= e %></li><% }) %></ul></div><% } %>
+<% if (check.warnings.length) { %><div class="flash error"><% check.warnings.forEach(w => { %><div><%= w %></div><% }) %></div><% } %>
+<% [['XML1 — Tổng hợp', built.xml1], ['XML2 — Thuốc', built.xml2], ['XML3 — Dịch vụ kỹ thuật', built.xml3]].forEach(([t, x]) => { %>
+<div class="card"><h2><%= t %></h2><pre style="white-space:pre-wrap;word-break:break-all;font-size:12px;max-height:360px;overflow:auto;background:var(--surface-2);padding:12px;border-radius:8px;margin:0"><%= pretty(x) %></pre></div>
+<% }) %>
+<%- include('partials/footer') %>

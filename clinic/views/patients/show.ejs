@@ -1,0 +1,82 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Bệnh án điện tử · <%= p.code %></div>
+    <h1><%= p.full_name %></h1>
+    <div class="muted"><%= GENDERS[p.gender] || '' %> · <%= age(p.dob) %><%= p.dob ? ` (${fmtDate(p.dob)})` : '' %> · <%= p.phone || 'chưa có SĐT' %></div>
+  </div>
+  <div class="actions">
+    <% if (can('receptionist','doctor')) { %>
+      <a class="btn primary" href="/visits/new?patient_id=<%= p.id %>">Tiếp nhận khám</a>
+      <a class="btn" href="/appointments/new?patient_id=<%= p.id %>">Đặt lịch hẹn</a>
+      <a class="btn" href="/patients/<%= p.id %>/edit">Sửa thông tin</a>
+    <% } %>
+  </div>
+</div>
+<% if (p.allergies) { %><div class="alert-allergy mb">⚠ Dị ứng: <%= p.allergies %></div><% } %>
+<div class="grid grid-main">
+  <div>
+    <div class="card">
+      <h2>Lịch sử khám bệnh (<%= visits.length %>)</h2>
+      <% if (visits.length) { %>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Ngày</th><th>Chuyên khoa</th><th>Bác sĩ</th><th>Chẩn đoán</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+        <% visits.forEach(v => { %>
+          <tr>
+            <td class="nowrap"><a href="/visits/<%= v.id %>"><%= fmtDate(v.visit_date) %></a></td>
+            <td><%= v.dept_name || '' %></td><td><%= v.doctor_name || '' %></td>
+            <td><%= v.icd_code ? v.icd_code + ' – ' : '' %><%= v.diagnosis || '' %></td>
+            <td><%- include('../partials/badge', { map: VISIT_STATUS, status: v.status }) %></td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+      <% } else { %><div class="empty">Chưa có lượt khám.</div><% } %>
+    </div>
+    <div class="card">
+      <h2>Lịch hẹn</h2>
+      <% if (appointments.length) { %>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Thời gian</th><th>Chuyên khoa</th><th>Bác sĩ</th><th>Lý do</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+        <% appointments.forEach(a => { %>
+          <tr><td class="nowrap"><%= fmtDateTime(a.scheduled_at) %></td><td><%= a.dept_name || '' %></td><td><%= a.doctor_name || '' %></td><td><%= a.reason || '' %></td>
+          <td><%- include('../partials/badge', { map: APPT_STATUS, status: a.status }) %></td></tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+      <% } else { %><div class="empty">Chưa có lịch hẹn.</div><% } %>
+    </div>
+    <% if (can('cashier','receptionist','doctor','pharmacist')) { %>
+    <div class="card">
+      <h2>Hóa đơn</h2>
+      <% if (invoices.length) { %>
+      <table>
+        <thead><tr><th>Mã HĐ</th><th>Ngày</th><th class="num">Thành tiền</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+        <% invoices.forEach(i => { %>
+          <tr><td><a href="/invoices/<%= i.id %>"><%= i.code %></a></td><td><%= fmtDateTime(i.paid_at || i.created_at) %></td><td class="num"><%= money(i.total) %></td>
+          <td><%- include('../partials/badge', { map: INVOICE_STATUS, status: i.status }) %></td></tr>
+        <% }) %>
+        </tbody>
+      </table>
+      <% } else { %><div class="empty">Chưa có hóa đơn.</div><% } %>
+    </div>
+    <% } %>
+  </div>
+  <div class="card">
+    <h2>Thông tin hành chính</h2>
+    <dl class="kv">
+      <dt>Mã bệnh nhân</dt><dd><%= p.code %></dd>
+      <dt>CCCD</dt><dd><%= p.id_number || '—' %></dd>
+      <dt>Số thẻ BHYT</dt><dd><%= p.insurance_number || '—' %><% if (p.insurance_number) { %><div class="small muted">Hạn: <%= fmtDate(p.insurance_valid_from) || '?' %> – <%= fmtDate(p.insurance_valid_to) || '?' %> · ĐKBĐ: <%= p.insurance_reg_place || '—' %> · Mức hưởng: <%= p.insurance_benefit || benefitFromCard(p.insurance_number) || '?' %>%</div><% } %></dd>
+      <dt>Nghề nghiệp</dt><dd><%= p.occupation || '—' %></dd>
+      <dt>Địa chỉ</dt><dd><%= p.address || '—' %></dd>
+      <dt>Người liên hệ</dt><dd><%= p.emergency_contact || '—' %></dd>
+      <dt>Tiền sử</dt><dd style="white-space:pre-line"><%= p.medical_history || '—' %></dd>
+      <dt>Ngày tạo hồ sơ</dt><dd><%= fmtDateTime(p.created_at) %></dd>
+    </dl>
+  </div>
+</div>
+<%- include('../partials/footer') %>

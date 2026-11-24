@@ -1,0 +1,14 @@
+<%- include('../partials/header') %>
+<div class="page-head"><div><h1>Nhân viên &amp; phân quyền</h1></div><div class="actions"><a class="btn primary" href="/admin/users/new">+ Thêm nhân viên</a></div></div>
+<div class="card">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Vai trò</th><th>Chuyên khoa</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody><% users.forEach(u => { %>
+      <tr><td><strong><%= u.title ? u.title + ' ' : '' %><%= u.full_name %></strong></td><td><%= u.username %></td><td><%= ROLES[u.role] %></td><td><%= u.dept_name || '' %></td>
+      <td><%- u.active ? '<span class="badge ok">Hoạt động</span>' : '<span class="badge muted">Đã khóa</span>' %></td>
+      <td class="right"><a class="btn small" href="/admin/users/<%= u.id %>/edit">Sửa</a></td></tr>
+    <% }) %></tbody>
+  </table></div>
+  <p class="muted small mt">Quyền: <strong>Lễ tân</strong> tiếp nhận, đặt lịch · <strong>Bác sĩ</strong> khám, chỉ định, kê đơn · <strong>Kỹ thuật viên CLS</strong> nhập kết quả xét nghiệm/CĐHA · <strong>Thu ngân</strong> thu tiền, báo cáo doanh thu · <strong>Dược sĩ</strong> quản lý kho thuốc · <strong>Quản trị</strong> toàn quyền.</p>
+</div>
+<%- include('../partials/footer') %>

@@ -1,0 +1,47 @@
+<%- include('../partials/header') %>
+<div class="page-head"><div><div class="eyebrow">Đón tiếp</div><h1>Tiếp nhận bệnh nhân</h1><div class="muted">Chọn bệnh nhân, chuyên khoa và dịch vụ khám. Hệ thống tự cấp số thứ tự theo phòng.</div></div></div>
+<% if (!patient) { %>
+  <%- include('../partials/patient-picker', { pickerAction: '/visits/new', pickerNext: 'checkin', results, q }) %>
+<% } else { %>
+<div class="card">
+  <div class="patient-banner">
+    <div><div class="name"><%= patient.full_name %></div><div class="muted"><%= patient.code %> · <%= GENDERS[patient.gender] || '' %> · <%= age(patient.dob) %> · <%= patient.phone || '' %></div></div>
+    <% if (patient.allergies) { %><div class="alert-allergy">⚠ Dị ứng: <%= patient.allergies %></div><% } %>
+    <a class="btn small" href="/visits/new">Đổi bệnh nhân</a>
+  </div>
+</div>
+<div class="card">
+  <%- include('../partials/errors', { errors }) %>
+  <form method="post" action="/visits">
+    <%- include('../partials/csrf') %>
+    <input type="hidden" name="patient_id" value="<%= patient.id %>">
+    <div class="form-grid">
+      <div class="field"><label>Chuyên khoa / phòng khám *</label>
+        <select name="department_id" required><option value="">— Chọn —</option>
+          <% const selDept = form.departmentId || Number(query.department_id) || null; %>
+          <% departments.forEach(d => { %><option value="<%= d.id %>" <%= selDept === d.id ? 'selected' : '' %>><%= d.name %><%= d.room ? ` (${d.room})` : '' %></option><% }) %>
+        </select>
+      </div>
+      <div class="field"><label>Bác sĩ (không bắt buộc)</label>
+        <select name="doctor_id"><option value="">— Bác sĩ trong phòng —</option>
+          <% doctors.forEach(d => { %><option value="<%= d.id %>" <%= form.doctorId === d.id ? 'selected' : '' %>><%= d.title ? d.title + ' ' : '' %><%= d.full_name %></option><% }) %>
+        </select>
+      </div>
+      <div class="field"><label>Dịch vụ khám (tính phí)</label>
+        <select name="service_id"><option value="">— Không thu phí khám —</option>
+          <% examServices.forEach(s => { %><option value="<%= s.id %>" <%= form.serviceId === s.id ? 'selected' : '' %>><%= s.name %> — <%= money(s.price) %></option><% }) %>
+        </select>
+      </div>
+      <div class="field wide">
+        <label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--text)">
+          <input type="checkbox" name="bhyt" value="1" style="width:auto" <%= (form.bhyt || (form.bhyt === undefined && patient.insurance_number)) ? 'checked' : '' %>>
+          Khám BHYT<% if (patient.insurance_number) { %> — thẻ <%= patient.insurance_number %>, hạn đến <%= fmtDate(patient.insurance_valid_to) || '(chưa nhập)' %><% } else { %> (bệnh nhân chưa có thẻ)<% } %>
+        </label>
+      </div>
+      <div class="field wide"><label>Lý do khám</label><input name="reason" value="<%= form.reason || '' %>" placeholder="Triệu chứng chính, yêu cầu khám…"></div>
+    </div>
+    <button class="btn primary" type="submit">Tiếp nhận &amp; cấp số</button>
+  </form>
+</div>
+<% } %>
+<%- include('../partials/footer') %>

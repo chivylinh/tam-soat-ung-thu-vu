@@ -1,0 +1,25 @@
+<%# Server-side patient search used by reception & appointment forms. Expects: pickerAction, results, q %>
+<div class="card">
+  <h2>Chọn bệnh nhân</h2>
+  <form method="get" action="<%= pickerAction %>" class="filters">
+    <input type="search" name="q" value="<%= q || '' %>" placeholder="Tên, SĐT, mã BN, CCCD…" autofocus>
+    <button class="btn" type="submit">Tìm</button>
+    <% if (can('receptionist','doctor')) { %><a class="btn primary" href="/patients/new?next=<%= pickerNext %>">+ Bệnh nhân mới</a><% } %>
+  </form>
+  <% if (q) { %>
+    <% if (results.length) { %>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Mã BN</th><th>Họ tên</th><th>Giới</th><th>Ngày sinh</th><th>SĐT</th><th></th></tr></thead>
+      <tbody>
+      <% results.forEach(p => { %>
+        <tr>
+          <td><%= p.code %></td><td><strong><%= p.full_name %></strong></td><td><%= GENDERS[p.gender] || '' %></td>
+          <td><%= fmtDate(p.dob) %></td><td><%= p.phone || '' %></td>
+          <td class="right"><a class="btn small primary" href="<%= pickerAction %>?patient_id=<%= p.id %>">Chọn</a></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+    <% } else { %><div class="empty">Không tìm thấy bệnh nhân "<%= q %>".</div><% } %>
+  <% } %>
+</div>

@@ -1,0 +1,15 @@
+<%- include('../partials/header') %>
+<div class="page-head"><div><h1>Nhật ký hoạt động</h1><div class="muted">Ghi lại thao tác của người dùng trên hồ sơ, lượt khám, hóa đơn, kho.</div></div></div>
+<div class="card">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Thời gian</th><th>Người dùng</th><th>Thao tác</th><th>Đối tượng</th><th>Chi tiết</th></tr></thead>
+    <tbody><% rows.forEach(r => { %>
+      <tr><td class="nowrap"><%= fmtDateTime(r.created_at) %></td><td><%= r.full_name || '' %></td><td><%= r.action %></td><td><%= r.entity || '' %><%= r.entity_id ? ' #' + r.entity_id : '' %></td><td><%= r.detail || '' %></td></tr>
+    <% }) %></tbody>
+  </table></div>
+  <div class="pager">
+    <% if (page > 1) { %><a class="btn small" href="?page=<%= page - 1 %>">← Mới hơn</a><% } %>
+    <% if (rows.length === 100) { %><a class="btn small" href="?page=<%= page + 1 %>">Cũ hơn →</a><% } %>
+  </div>
+</div>
+<%- include('../partials/footer') %>

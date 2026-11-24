@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập · <%= clinicName %></title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="card login-card">
+    <div class="brand" style="border:0">
+      <div class="brand-logo">+</div>
+      <div><div class="brand-name"><%= clinicName %></div><div class="brand-sub">Phần mềm quản lý phòng khám</div></div>
+    </div>
+    <% if (error) { %><div class="errors"><%= error %></div><% } %>
+    <form method="post" action="/login">
+      <%- include('partials/csrf') %>
+      <div class="field"><label for="username">Tên đăng nhập</label><input id="username" name="username" value="<%= username %>" autocomplete="username" required autofocus></div>
+      <div class="field"><label for="password">Mật khẩu</label><input id="password" type="password" name="password" autocomplete="current-password" required></div>
+      <button class="btn primary" style="width:100%;justify-content:center" type="submit">Đăng nhập</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div><h1>Hàng đợi &amp; phòng khám</h1><div class="muted">Ngày <%= fmtDate(date) %> · <%= visits.length %> lượt</div></div>
+  <% if (can('receptionist','doctor')) { %><div class="actions"><a class="btn primary" href="/visits/new">+ Tiếp nhận bệnh nhân</a></div><% } %>
+</div>
+<div class="card">
+  <form class="filters" method="get" action="/visits">
+    <input type="date" name="date" value="<%= date %>">
+    <select name="department_id"><option value="">Tất cả chuyên khoa</option>
+      <% departments.forEach(d => { %><option value="<%= d.id %>" <%= departmentId === d.id ? 'selected' : '' %>><%= d.name %></option><% }) %>
+    </select>
+    <select name="status"><option value="">Mọi trạng thái</option>
+      <% Object.entries(VISIT_STATUS).forEach(([k, v]) => { %><option value="<%= k %>" <%= status === k ? 'selected' : '' %>><%= v[0] %></option><% }) %>
+    </select>
+    <% if (user.role === 'doctor') { %><label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" name="mine" value="1" style="width:auto" <%= mine ? 'checked' : '' %>> Của tôi</label><% } %>
+    <button class="btn" type="submit">Lọc</button>
+  </form>
+  <% if (visits.length) { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>STT</th><th>Bệnh nhân</th><th>Chuyên khoa</th><th>Bác sĩ</th><th>Lý do khám</th><th>Trạng thái</th><th>Thanh toán</th><th></th></tr></thead>
+    <tbody>
+    <% visits.forEach(v => { %>
+      <tr>
+        <td><span class="qnum"><%= v.queue_number %></span></td>
+        <td><a href="/visits/<%= v.id %>"><strong><%= v.full_name %></strong></a><div class="small muted"><%= v.code %> · <%= GENDERS[v.gender] || '' %> <%= age(v.dob) %></div></td>
+        <td><%= v.dept_name || '' %></td>
+        <td><%= v.doctor_name || '—' %></td>
+        <td><%= v.reason || '' %></td>
+        <td><%- include('../partials/badge', { map: VISIT_STATUS, status: v.status }) %></td>
+        <td><%- v.paid_count ? '<span class="badge ok">Đã thu</span>' : '<span class="badge muted">Chưa</span>' %></td>
+        <td class="right nowrap">
+          <% if (v.status === 'waiting' && can('doctor')) { %>
+            <form method="post" action="/visits/<%= v.id %>/start" class="inline"><%- include('../partials/csrf') %><button class="btn small primary">Gọi khám</button></form>
+          <% } else { %><a class="btn small" href="/visits/<%= v.id %>">Mở</a><% } %>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% } else { %><div class="empty">Không có lượt khám nào.</div><% } %>
+</div>
+<%- include('../partials/footer') %>

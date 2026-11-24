@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %> · <%= clinicName %></title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<input type="checkbox" id="menu-toggle" class="menu-toggle" aria-hidden="true">
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">+</div>
+      <div>
+        <div class="brand-name"><%= clinicName %></div>
+        <div class="brand-sub">Quản lý phòng khám</div>
+      </div>
+    </div>
+    <%
+      const navLink = (href, label, opts = {}) => {
+        const active = opts.exact ? path === href : (path === href || path.startsWith(href + '/'));
+        return `<a href="${href}" class="${active ? 'active' : ''}"><span class="dot"></span>${label}</a>`;
+      };
+    %>
+    <nav class="nav">
+      <div class="nav-group">
+        <div class="nav-title">Điều hành</div>
+        <%- navLink('/', 'Tổng quan', { exact: true }) %>
+        <%- navLink('/display', 'Màn hình phòng chờ') %>
+      </div>
+      <div class="nav-group">
+        <div class="nav-title">Đón tiếp &amp; khám bệnh</div>
+        <% if (can('receptionist','doctor')) { %><%- navLink('/visits/new', 'Tiếp nhận bệnh nhân', { exact: true }) %><% } %>
+        <%- path === '/visits/new' ? `<a href="/visits"><span class="dot"></span>Hàng đợi &amp; phòng khám</a>` : navLink('/visits', 'Hàng đợi &amp; phòng khám') %>
+        <%- navLink('/appointments', 'Lịch hẹn') %>
+        <% if (can('receptionist','doctor')) { %><%- navLink('/reminders', 'Nhắc lịch hẹn &amp; tái khám') %><% } %>
+        <%- navLink('/patients', 'Hồ sơ bệnh nhân') %>
+      </div>
+      <div class="nav-group">
+        <div class="nav-title">Cận lâm sàng</div>
+        <%- navLink('/lab', 'Xét nghiệm &amp; CĐHA') %>
+      </div>
+      <div class="nav-group">
+        <div class="nav-title">Viện phí &amp; dược</div>
+        <% if (can('cashier','receptionist')) { %><%- navLink('/invoices', 'Thu ngân') %><% } %>
+        <%- navLink('/pharmacy', 'Kho thuốc') %>
+        <% if (can('cashier')) { %><%- navLink('/bhyt', 'Xuất XML BHYT') %><% } %>
+      </div>
+      <% if (can('cashier')) { %>
+      <div class="nav-group">
+        <div class="nav-title">Báo cáo<%= user.role === 'admin' ? ' & quản trị' : '' %></div>
+        <%- navLink('/reports', 'Báo cáo thống kê') %>
+        <% if (user.role === 'admin') { %>
+          <%- navLink('/admin/users', 'Nhân viên') %>
+          <%- navLink('/admin/departments', 'Chuyên khoa / phòng') %>
+          <%- navLink('/admin/services', 'Dịch vụ &amp; bảng giá') %>
+          <%- navLink('/admin/audit', 'Nhật ký hoạt động') %>
+        <% } %>
+      </div>
+      <% } %>
+    </nav>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <label for="menu-toggle" class="menu-btn" aria-label="Mở menu">☰</label>
+      <div class="crumb"><%= title %></div>
+      <form class="search" action="/patients" method="get" role="search">
+        <input type="search" name="q" placeholder="Tìm bệnh nhân: tên, SĐT, mã BN, CCCD…" aria-label="Tìm bệnh nhân">
+      </form>
+      <div class="userbox">
+        <div class="avatar"><%= (user.full_name || '?').trim().split(/\s+/).pop().charAt(0).toUpperCase() %></div>
+        <div class="who"><strong><%= user.full_name %></strong><small><%= ROLES[user.role] %></small></div>
+        <a class="btn small" href="/account/password" title="Đổi mật khẩu">Mật khẩu</a>
+        <form method="post" action="/logout" class="inline">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <button class="btn small" type="submit">Đăng xuất</button>
+        </form>
+      </div>
+    </header>
+    <main class="content">
+      <% if (weakPassword && path !== '/account/password') { %><div class="flash error">Bạn đang dùng mật khẩu mặc định hoặc quá ngắn. <a href="/account/password">Đổi mật khẩu ngay</a>.</div><% } %>
+      <% if (flash) { %><div class="flash <%= flash.type %>"><%= flash.message %></div><% } %>

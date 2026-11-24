@@ -1,0 +1,39 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div><h1>Hồ sơ bệnh nhân</h1><div class="muted"><%= total %> bệnh nhân<%= q ? ` khớp với "${q}"` : '' %></div></div>
+  <% if (can('receptionist','doctor')) { %><div class="actions"><a class="btn primary" href="/patients/new">+ Thêm bệnh nhân</a></div><% } %>
+</div>
+<div class="card">
+  <form class="filters" method="get" action="/patients">
+    <input type="search" name="q" value="<%= q || '' %>" placeholder="Tên, SĐT, mã BN, CCCD, số BHYT…">
+    <button class="btn" type="submit">Tìm</button>
+    <% if (q) { %><a href="/patients">Xóa lọc</a><% } %>
+  </form>
+  <% if (patients.length) { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Mã BN</th><th>Họ tên</th><th>Giới</th><th>Tuổi</th><th>SĐT</th><th>BHYT</th><th>Khám gần nhất</th><th></th></tr></thead>
+    <tbody>
+    <% patients.forEach(p => { %>
+      <tr>
+        <td><%= p.code %></td>
+        <td><a href="/patients/<%= p.id %>"><strong><%= p.full_name %></strong></a></td>
+        <td><%= GENDERS[p.gender] || '' %></td>
+        <td class="nowrap"><%= age(p.dob) %></td>
+        <td><%= p.phone || '' %></td>
+        <td><%= p.insurance_number || '' %></td>
+        <td><%= fmtDate(p.last_visit) %></td>
+        <td class="right nowrap"><% if (can('receptionist','doctor')) { %><a class="btn small" href="/visits/new?patient_id=<%= p.id %>">Tiếp nhận</a><% } %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% if (pages > 1) { %>
+  <div class="pager">
+    <% if (page > 1) { %><a class="btn small" href="?q=<%= encodeURIComponent(q || '') %>&page=<%= page - 1 %>">← Trước</a><% } %>
+    <span class="muted">Trang <%= page %>/<%= pages %></span>
+    <% if (page < pages) { %><a class="btn small" href="?q=<%= encodeURIComponent(q || '') %>&page=<%= page + 1 %>">Sau →</a><% } %>
+  </div>
+  <% } %>
+  <% } else { %><div class="empty">Chưa có bệnh nhân nào.</div><% } %>
+</div>
+<%- include('../partials/footer') %>

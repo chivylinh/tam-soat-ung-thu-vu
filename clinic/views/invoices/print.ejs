@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hóa đơn <%= inv.code %></title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body style="background:#fff">
+<div class="print-page">
+  <div class="no-print actions"><button class="btn primary" data-print>In</button><a class="btn" href="/invoices/<%= inv.id %>">Quay lại</a></div>
+  <div class="print-head"><div><strong><%= clinicName.toUpperCase() %></strong></div><div class="right small">Số: <%= inv.code %><br><%= fmtDateTime(inv.paid_at || inv.created_at) %></div></div>
+  <div class="print-title">Phiếu thu viện phí</div>
+  <% if (inv.status !== 'paid') { %><p class="right"><span class="badge warn"><%= INVOICE_STATUS[inv.status][0] %></span></p><% } %>
+  <dl class="kv"><dt>Bệnh nhân</dt><dd><strong><%= patient.full_name %></strong> (<%= patient.code %>)</dd><dt>Chuyên khoa</dt><dd><%= visit.dept_name || '' %></dd><% if (visit.bhyt) { %><dt>Thẻ BHYT</dt><dd><%= patient.insurance_number %></dd><% } %></dl>
+  <table class="mt">
+    <thead><tr><th>#</th><th>Nội dung</th><th class="num">SL</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th></tr></thead>
+    <tbody><% items.forEach((it, i) => { %><tr><td><%= i + 1 %></td><td><%= it.description %></td><td class="num"><%= it.quantity %></td><td class="num"><%= money(it.unit_price) %></td><td class="num"><%= money(it.amount) %></td></tr><% }) %></tbody>
+    <tfoot>
+      <tr><td colspan="4" class="right">Tạm tính</td><td class="num"><%= money(inv.subtotal) %></td></tr>
+      <% if (inv.insurance_amount) { %><tr><td colspan="4" class="right">BHYT chi trả</td><td class="num">−<%= money(inv.insurance_amount) %></td></tr><% } %>
+      <% if (inv.discount) { %><tr><td colspan="4" class="right">Giảm giá</td><td class="num">−<%= money(inv.discount) %></td></tr><% } %>
+      <tr><td colspan="4" class="right">Người bệnh trả</td><td class="num"><%= money(inv.total) %></td></tr>
+    </tfoot>
+  </table>
+  <p>Hình thức: <%= PAYMENT_METHODS[inv.payment_method] || '' %></p>
+  <div class="sign"><div><strong>Người nộp tiền</strong></div><div><strong>Thu ngân</strong><br><br><br><br><%= cashier ? cashier.full_name : '' %></div></div>
+</div>
+</body></html>
